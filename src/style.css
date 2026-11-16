@@ -414,7 +414,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .set.done { background: var(--field); }
 .set.current { border: 2px solid var(--ink); border-radius: 12px; padding: 8px 4px; background: var(--field); }
 .set.current .numeric { display: grid; grid-template-columns: 1fr 1fr; }
-.set.current .numeric input { grid-column: 1 / -1; grid-row: 1; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; }
+.set.current .numeric input { grid-column: 1 / -1; grid-row: 1; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; margin: 0; min-height: 60px; background: var(--surface); border: 1px solid var(--line); }
 .set.current .numeric button { width: 100%; min-width: 0; min-height: 44px; }
 .set-state { font-size: 12px; font-weight: 700; color: var(--ink); margin: 12px 0 4px; }
 .set-state.next { color: var(--muted); font-weight: 400; }
@@ -426,3 +426,5 @@ input::placeholder { color: var(--muted); opacity: 1; }
 select:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .next-preview { display: block; margin: 6px 0 10px; overflow-wrap: anywhere; }
+
+@media (max-width: 360px) { .set.current .numeric input { font-size: 24px; } }

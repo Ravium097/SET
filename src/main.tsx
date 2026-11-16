@@ -390,7 +390,7 @@ function WorkoutFields({
       {w.exercises.map((e, i) => {
         const previous = w.status === "active" ? previousPerformance(w, i, history) : null;
         return (
-        <details key={e.id} open>
+        <details key={e.id} open={w.status !== "active" || e.sets.some(set => set.id === focus.current)}>
           <summary>
             {e.name}
             <small>
