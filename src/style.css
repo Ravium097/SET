@@ -176,7 +176,8 @@ button:disabled {
   font-weight: 600;
 }
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-width: 0;
   background: var(--field);
@@ -261,8 +262,48 @@ summary {
   cursor: pointer;
   min-height: 44px;
 }
-summary small {
-  float: right;
+.workout-exercise-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.workout-exercise-heading::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: solid var(--muted);
+  border-width: 0 1px 1px 0;
+  transform: rotate(-45deg);
+  flex-shrink: 0;
+}
+details[open] > .workout-exercise-heading::before {
+  transform: translateY(-2px) rotate(45deg);
+}
+.workout-exercise-heading > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workout-exercise-heading > small {
+  white-space: nowrap;
+}
+.exercise-note-toggle {
+  width: 44px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.exercise-note-toggle:hover,
+.exercise-note-toggle[aria-expanded="true"] {
+  color: var(--ink);
+  background: var(--field);
+}
+.exercise-note:not([hidden]) {
+  display: block;
+  resize: vertical;
 }
 .setheading,
 .set {
@@ -334,7 +375,8 @@ summary small {
 }
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 2px solid var(--muted);
   outline-offset: 2px;
 }
