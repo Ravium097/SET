@@ -79,6 +79,14 @@ export const equipment = [
   "Langhantel",
   "Kabelzug",
   "Körpergewicht",
+  "Multipresse",
+  "SZ-Stange",
+  "Trap Bar",
+  "Kettlebell",
+  "Widerstandsband",
+  "Landmine",
+  "Schlingentrainer",
+  "Ab-Roller",
   "Sonstige",
 ];
 export async function init() {

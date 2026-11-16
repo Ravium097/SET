@@ -59,6 +59,10 @@ import {
   type Exercise,
 } from "./data";
 import "./style.css";
+import { ExpandLibrary } from "./components/exercises/ExpandLibrary";
+import { matchesExercise } from "./services/exerciseCatalog";
+import { previousPerformance } from "./services/previousPerformance";
+import { PreviousSet } from "./components/workout/PreviousSet";
 import { PersonalTemplates } from "./components/templates/PersonalTemplates";
 import { UpdateControl } from "./components/pwa/UpdateControl";
 const day = (d = new Date()) => format(d, "yyyy-MM-dd");
@@ -351,6 +355,7 @@ function WorkoutFields({
 }) {
   const ex = useLiveQuery(() => db.exercises.toArray()) ?? [];
   const [query, setQuery] = useState("");
+  const history = useLiveQuery<Workout[]>(() => w.status === "active" ? db.workouts.where("status").equals("completed").toArray() : Promise.resolve([]), [w.status]) ?? [];
   const modify = (idx: number, e: Item) =>
     save({ ...w, exercises: w.exercises.map((x, i) => (i === idx ? e : x)) });
   return (
@@ -370,7 +375,9 @@ function WorkoutFields({
           onChange={(e) => save({ ...w, date: e.target.value })}
         />
       </label>
-      {w.exercises.map((e, i) => (
+      {w.exercises.map((e, i) => {
+        const previous = w.status === "active" ? previousPerformance(w, i, history) : null;
+        return (
         <details key={e.id} open>
           <summary>
             {e.name}
@@ -383,6 +390,7 @@ function WorkoutFields({
             value={e.name}
             onChange={(ev) => modify(i, { ...e, name: ev.target.value })}
           />
+          {w.status === "active" && !previous && <small>Noch keine vorherigen Satzwerte für diese Übung.</small>}
           <div className="setheading">
             <span>Satz</span>
             <span>Gewicht · kg</span>
@@ -398,7 +406,7 @@ function WorkoutFields({
                 ),
               });
             return (
-              <div className={`set ${s.completed ? "done" : ""}`} key={s.id}>
+              <React.Fragment key={s.id}><div className={`set ${s.completed ? "done" : ""}`}>
                 <button
                   aria-label="Satz löschen"
                   onClick={() =>
@@ -443,6 +451,8 @@ function WorkoutFields({
                   }}
                 />
               </div>
+              {previous && <PreviousSet previous={previous.sets[j]} date={previous.date} completed={s.completed} onApply={update} />}
+              </React.Fragment>
             );
           })}
           <button
@@ -471,7 +481,7 @@ function WorkoutFields({
             Übung entfernen
           </button>
         </details>
-      ))}
+      );})}
       <article>
         <label>
           Übung hinzufügen
@@ -502,7 +512,8 @@ function WorkoutFields({
         >
           <option value="">Übung auswählen</option>
           {ex
-            .filter((e) => e.name.toLowerCase().includes(query.toLowerCase()))
+            .filter((e) => matchesExercise(e, query))
+            .sort((a,b) => a.name.localeCompare(b.name, "de"))
             .map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
@@ -598,19 +609,20 @@ function Library() {
   return (
     <>
       <h1>Übungen</h1>
+      <ExpandLibrary />
       <input
         placeholder="Übung suchen"
         value={q}
         onChange={(e) => Q(e.target.value)}
       />
       <div className="two">
-        <select value={m} onChange={(e) => M(e.target.value)}>
+        <select aria-label="Muskelgruppe filtern" value={m} onChange={(e) => M(e.target.value)}>
           <option value="">Alle Muskelgruppen</option>
           {muscles.map((x) => (
             <option key={x}>{x}</option>
           ))}
         </select>
-        <select value={eq} onChange={(e) => E(e.target.value)}>
+        <select aria-label="Gerät filtern" value={eq} onChange={(e) => E(e.target.value)}>
           <option value="">Alle Geräte</option>
           {equipment.map((x) => (
             <option key={x}>{x}</option>
@@ -697,11 +709,12 @@ function Library() {
       {es
         .filter(
           (e) =>
-            e.name.toLowerCase().includes(q.toLowerCase()) &&
+            matchesExercise(e, q) &&
             (!m || e.muscle === m) &&
             (!eq || e.equipment === eq) &&
             (!fav || e.favorite),
         )
+        .sort((a,b) => a.name.localeCompare(b.name, "de"))
         .map((e) => (
           <article key={e.id}>
             <h3>{e.name}</h3>

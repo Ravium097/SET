@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export const RELEASE = "Classic UI · 02";
+export const RELEASE = "Classic UI · 03";
 let registrationPromise: Promise<ServiceWorkerRegistration> | undefined;
 function registration() {
   return (registrationPromise ??= navigator.serviceWorker

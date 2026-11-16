@@ -90,3 +90,11 @@ Alternativ einen vorhandenen Chromium über `CHROMIUM_PATH=/usr/bin/chromium` au
 ### Aktueller Designstand: Classic UI
 
 Auf Nutzerwunsch ist das ursprüngliche Clean-Light-Kartendesign wieder aktiv (Versionsanzeige: `Classic UI · 02`). Die Push-/Pull-Vorlagen, sichere additive Übernahme, Update-Korrektur und feste Navigation bleiben erhalten. Der Abschnitt „Visual Preview“ beschreibt die vorherige Gestaltungsphase; an Datenmodell und Trainingswerten wurde bei der Rückkehr nichts geändert.
+
+## Mehr Übungen und letzte Trainingswerte
+
+Unter **Training → Übungsbibliothek → Mehr Übungen & Geräte → Übungsbibliothek erweitern** ergänzt SET fehlende Einträge aus 169 gängigen Übungen und Varianten. Deutsche/englische Suche und Gerätefilter funktionieren auch offline. Eigene Übungen, Favoriten und vorhandene Trainings bleiben erhalten. Acht zusätzliche Geräteklassen stehen auch für eigene Übungen zur Auswahl.
+
+In aktiven Workouts erscheinen frühere abgeschlossene Satzwerte derselben Übung. **Übernehmen** kopiert Gewicht/Wiederholungen, ohne einen Satz abzuschließen. Der Vergleich verwendet echte frühere Einheiten; fehlt eine eindeutige Historie, zeigt SET keine erfundenen Werte.
+
+Recherchequellen, Auswahlgrenzen und Vergleichsregeln: [Dokumentation](docs/EXERCISE-CATALOG.md). Zusätzlicher Browsertest: `CHROMIUM_PATH=/usr/bin/chromium node scripts/check-library.cjs` nach `npm run build` (oder ohne `CHROMIUM_PATH` nach `npx playwright install chromium`).
