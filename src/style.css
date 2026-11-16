@@ -1,8 +1,15 @@
 @import "tailwindcss";
 :root {
+  color-scheme: dark;
+  --bg: #111111;
+  --surface: #1c1c1e;
+  --ink: #f5f5f5;
+  --muted: #b0b0b5;
+  --line: #3b3b3f;
+  --field: #29292d;
   font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif;
-  color: #171717;
-  background: #f7f7f7;
+  color: var(--ink);
+  background: var(--bg);
   font-synthesis: none;
   font-size: 15px;
 }
@@ -47,7 +54,7 @@ h1 {
   margin: 14px 0 20px;
 }
 h1 span {
-  color: #737373;
+  color: var(--muted);
 }
 h2 {
   font-size: 21px;
@@ -61,14 +68,14 @@ h3 {
   margin: 8px 0;
 }
 p {
-  color: #737373;
+  color: var(--muted);
   line-height: 1.65;
   margin: 12px 0;
 }
 small,
 .eyebrow {
   font-size: 12px;
-  color: #737373;
+  color: var(--muted);
 }
 .eyebrow {
   text-transform: uppercase;
@@ -77,8 +84,8 @@ small,
 article,
 details,
 .tile {
-  background: white;
-  border: 1px solid #e5e5e5;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 18px;
   padding: 20px;
   margin: 12px 0;
@@ -112,9 +119,9 @@ button,
   align-items: center;
   min-height: 44px;
   padding: 10px 14px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--surface);
   font: inherit;
   cursor: pointer;
   margin: 3px 0;
@@ -124,9 +131,9 @@ button:disabled {
   cursor: default;
 }
 .primary {
-  background: #171717;
-  color: white;
-  border-color: #171717;
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
 }
 .action {
   display: flex;
@@ -147,7 +154,7 @@ button:disabled {
 }
 .empty svg {
   margin: 0 auto 16px;
-  color: #737373;
+  color: var(--muted);
 }
 .note {
   background: transparent;
@@ -172,8 +179,8 @@ input,
 select {
   width: 100%;
   min-width: 0;
-  background: #f5f5f5;
-  border: 1px solid #e5e5e5;
+  background: var(--field);
+  border: 1px solid var(--line);
   border-radius: 10px;
   font: inherit;
   font-size: 16px;
@@ -185,11 +192,11 @@ input[type="checkbox"] {
   width: 24px;
   height: 24px;
   min-height: 24px;
-  accent-color: #171717;
+  accent-color: var(--ink);
 }
 label {
   display: block;
-  color: #737373;
+  color: var(--muted);
   font-size: 13px;
   margin: 8px 0;
 }
@@ -201,8 +208,8 @@ nav {
   width: calc(100% - 32px);
   max-width: 480px;
   display: flex;
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 40px;
   padding: 10px;
   box-shadow: 0 8px 35px #00000015;
@@ -214,13 +221,13 @@ nav a {
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  color: #939393;
+  color: var(--muted);
   font-size: 10px;
   min-height: 44px;
   justify-content: center;
 }
 nav a.active {
-  color: #171717;
+  color: var(--ink);
   font-weight: 700;
 }
 .timer {
@@ -230,8 +237,8 @@ nav a.active {
   transform: translateX(-50%);
   width: calc(100% - 40px);
   max-width: 470px;
-  background: #171717;
-  color: #fff;
+  background: var(--ink);
+  color: var(--surface);
   border-radius: 18px;
   padding: 10px 15px;
   display: flex;
@@ -244,7 +251,7 @@ nav a.active {
   margin-right: auto;
 }
 .timer button {
-  color: white;
+  color: var(--surface);
   background: #333;
   border: 0;
   padding: 8px;
@@ -266,7 +273,7 @@ summary small {
 }
 .setheading {
   font-size: 10px;
-  color: #737373;
+  color: var(--muted);
   margin: 14px 0;
 }
 .set > button {
@@ -295,7 +302,7 @@ summary small {
   background: transparent;
 }
 .done {
-  background: #eee;
+  background: var(--field);
   border-radius: 10px;
 }
 .calendar {
@@ -316,19 +323,19 @@ summary small {
   font-size: 8px;
 }
 .calendar .selected {
-  background: #171717;
-  color: #fff;
+  background: var(--ink);
+  color: var(--surface);
 }
 .calendar .today {
-  outline: 1px solid #aaa;
+  outline: 1px solid var(--muted);
 }
 .calendar .selected small {
-  color: #fff;
+  color: var(--surface);
 }
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
-  outline: 2px solid #737373;
+  outline: 2px solid var(--muted);
   outline-offset: 2px;
 }
 @media (max-width: 380px) {
@@ -357,7 +364,7 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 main { width: 100%; height: 100%; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-x: none; touch-action: pan-y pinch-zoom; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; padding: calc(12px + env(safe-area-inset-top)) 20px 16px; scroll-padding-block: 16px; }
 header { margin-bottom: 18px; min-height: 44px; }
 header > a:last-child { display: grid; place-items: center; width: 44px; height: 44px; }
-.app-dock { padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); background: #f7f7f7; z-index: 10; }
+.app-dock { padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--bg); z-index: 10; }
 .app-dock nav, .app-dock .timer { position: static; transform: none; width: 100%; margin: 0 auto; }
 .app-dock .timer { margin-bottom: 10px; }
 .overview h1 { font-size: clamp(29px, 7vw, 36px); margin: 10px 0 12px; }
@@ -384,7 +391,7 @@ header > a:last-child { display: grid; place-items: center; width: 44px; height:
 
 /* Functional additions retain the original card design. */
 .update-panel:has(.update-control) { margin-bottom: 16px; }
-.update-control { background: #fff; border: 1px solid #e5e5e5; border-radius: 18px; padding: 16px; }
+.update-control { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
 .update-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .personal-templates summary { min-height: 44px; cursor: pointer; padding-block: 10px; }
 .personal-templates p { overflow-wrap: anywhere; }
@@ -392,3 +399,30 @@ header > a:last-child { display: grid; place-items: center; width: 44px; height:
 .previous-set { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 8px; }
 .previous-set small { min-width: 0; overflow-wrap: anywhere; }
 .previous-set button { font-size: 12px; padding: 6px 10px; }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f7f7f7; --surface: #ffffff; --ink: #171717;
+  --muted: #737373; --line: #e5e5e5; --field: #f5f5f5;
+}
+input, select, button { color: inherit; }
+.primary, .calendar .selected { color: var(--surface); }
+input::placeholder { color: var(--muted); opacity: 1; }
+.timer { background: #171717; color: #fff; border: 1px solid var(--line); }
+.timer button { background: #333; color: #fff; }
+.set.done, .set.done input, .set.done button { color: var(--muted); }
+.set.done { background: var(--field); }
+.set.current { border: 2px solid var(--ink); border-radius: 12px; padding: 8px 4px; background: var(--field); }
+.set.current .numeric { display: grid; grid-template-columns: 1fr 1fr; }
+.set.current .numeric input { grid-column: 1 / -1; grid-row: 1; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; }
+.set.current .numeric button { width: 100%; min-width: 0; min-height: 44px; }
+.set-state { font-size: 12px; font-weight: 700; color: var(--ink); margin: 12px 0 4px; }
+.set-state.next { color: var(--muted); font-weight: 400; }
+.onboarding h2 { margin-top: 0; }
+.onboarding small { display: block; margin-top: 8px; }
+.onboarding button { margin-right: 8px; }
+.recharts-cartesian-axis-tick-value { fill: var(--muted); }
+.recharts-tooltip-label, .recharts-tooltip-item { color: var(--ink) !important; }
+select:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.next-preview { display: block; margin: 6px 0 10px; overflow-wrap: anywhere; }

@@ -98,3 +98,11 @@ Unter **Training → Übungsbibliothek → Mehr Übungen & Geräte → Übungsbi
 In aktiven Workouts erscheinen frühere abgeschlossene Satzwerte derselben Übung. **Übernehmen** kopiert Gewicht/Wiederholungen, ohne einen Satz abzuschließen. Der Vergleich verwendet echte frühere Einheiten; fehlt eine eindeutige Historie, zeigt SET keine erfundenen Werte.
 
 Recherchequellen, Auswahlgrenzen und Vergleichsregeln: [Dokumentation](docs/EXERCISE-CATALOG.md). Zusätzlicher Browsertest: `CHROMIUM_PATH=/usr/bin/chromium node scripts/check-library.cjs` nach `npm run build` (oder ohne `CHROMIUM_PATH` nach `npx playwright install chromium`).
+
+## Dunkelmodus, Satzführung und Einstieg
+
+- Dunkel ist die Standardeinstellung. Unter **Einstellungen → Darstellung → Farbschema** lässt sich Hell wählen. Theme und ausgeblendete Einführung werden lokal auf diesem Gerät gespeichert (separat vom Trainings-JSON-Backup); kein Datenbankumbau.
+- Im aktiven Training wird der erste offene Satz hervorgehoben und in den sichtbaren Bereich gebracht. Die nächste offene Satzposition wird angezeigt; erledigte Sätze bleiben bearbeitbar. Gewichte, Wiederholungen und Timerlogik bleiben unverändert.
+- Auf einer leeren Startseite erklärt eine kurze Einführung die Erfassung. **Beispielvorlage laden** legt ausschließlich eine bearbeitbare Ganzkörpervorlage mit drei Übungen und je zwei leeren Sätzen an. Keine erfundenen Leistungsdaten und keine abgeschlossene Einheit. Die Vorlage ist auch über die leere Trainingsseite erreichbar.
+- Sichtbare Oberflächentexte verwenden „Start“/„Training“, Diagrammhinweise und Fehlermeldungen sind deutsch. Eigene Übungs- und Vorlagennamen werden nicht umbenannt. `src/i18n/de.ts` bildet den typisierten Einstieg für spätere Übersetzungen; noch kein vollständiger Mehrsprachenmodus.
+- Zusätzliche Prüfung: nach `npm run build` mit `CHROMIUM_PATH=/usr/bin/chromium node scripts/check-theme.cjs` beide Themes, Einführung, Satzwechsel, Speicherung und Offline-Wiederaufnahme testen. Eine echte iOS-Geräteprüfung steht separat aus.

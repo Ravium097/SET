@@ -59,6 +59,12 @@ import {
   type Exercise,
 } from "./data";
 import "./style.css";
+import { t, germanError } from "./i18n/de";
+import { applyTheme, readTheme } from "./services/theme";
+import { ThemePicker } from "./components/settings/ThemePicker";
+import { Onboarding } from "./components/onboarding/Onboarding";
+import { setFocus } from "./services/setFocus";
+applyTheme(readTheme());
 import { ExpandLibrary } from "./components/exercises/ExpandLibrary";
 import { matchesExercise } from "./services/exerciseCatalog";
 import { previousPerformance } from "./services/previousPerformance";
@@ -68,12 +74,7 @@ import { UpdateControl } from "./components/pwa/UpdateControl";
 const day = (d = new Date()) => format(d, "yyyy-MM-dd");
 const fmt = (n: number) =>
   n.toLocaleString("de-DE", { maximumFractionDigits: 1 });
-const error = (e: unknown) =>
-  alert(
-    e instanceof Error
-      ? e.message
-      : "Speichern fehlgeschlagen. Bitte Backup erstellen.",
-  );
+const error = (e: unknown) => alert(germanError(e));
 function App() {
   const { pathname } = useLocation();
   useEffect(() => { document.querySelector("main")?.scrollTo(0, 0); }, [pathname]);
@@ -155,7 +156,7 @@ function App() {
       )}
       <nav aria-label="Hauptnavigation">
         {[
-          [Home, "/", "Home"],
+          [Home, "/", "Start"],
           [Dumbbell, "/training", "Training"],
           [CalendarDays, "/history", "Verlauf"],
           [ChartNoAxesCombined, "/stats", "Statistik"],
@@ -174,7 +175,8 @@ function App() {
   );
 }
 function Dashboard() {
-  const all = useLiveQuery(() => db.workouts.toArray()) ?? [];
+  const savedTrainings = useLiveQuery(() => db.workouts.toArray());
+  const all = savedTrainings ?? [];
   const done = all
     .filter((w) => w.status === "completed")
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -190,10 +192,11 @@ function Dashboard() {
         <span>Dein Fortschritt.</span>
       </h1>
       <p className="dashboard-tagline">Ein Satz nach dem anderen.</p>
+      {savedTrainings && !all.length && <Onboarding />}
       <div className="metrics">
         <article>
           <b>{done.length}</b>
-          <small>Workouts gesamt</small>
+          <small>Trainings gesamt</small>
         </article>
         <article>
           <b>{fmt(done.reduce((s, w) => s + volume(w), 0))}</b>
@@ -217,10 +220,10 @@ function Dashboard() {
         to={active ? `/workout/${active.id}` : "/training"}
       >
         <Dumbbell />
-        {active ? "Workout fortsetzen" : "Workout starten"}
+        {active ? "Training fortsetzen" : "Training starten"}
         <ArrowRight />
       </Link>
-      <h2>Letztes Workout</h2>
+      <h2>Letztes Training</h2>
       {done[0] ? (
         <WorkoutCard w={done[0]} />
       ) : (
@@ -230,7 +233,7 @@ function Dashboard() {
           <p>
             Hier beginnt deine Trainingsgeschichte.
             <br />
-            Starte dein erstes Workout.
+            Starte dein erstes Training.
           </p>
         </article>
       )}
@@ -263,7 +266,7 @@ function Training() {
     }
     const w: Workout = {
       id: id(),
-      name: template?.name ?? "Freies Workout",
+      name: template?.name ?? "Freies Training",
       date: day(),
       started: Date.now(),
       duration: null,
@@ -285,11 +288,12 @@ function Training() {
       <h1>Training</h1>
       <button className="primary action" onClick={() => start().catch(error)}>
         <Plus />
-        Freies Workout starten
+        Freies Training starten
       </button>
       <Link className="tile" to="/library">
         Übungsbibliothek <Dumbbell />
       </Link>
+      {!ws.length && <Onboarding allowDismiss={false} />}
       <h2>Deine Vorlagen</h2>
       <PersonalTemplates />
       {ws
@@ -356,6 +360,14 @@ function WorkoutFields({
   const ex = useLiveQuery(() => db.exercises.toArray()) ?? [];
   const [query, setQuery] = useState("");
   const history = useLiveQuery<Workout[]>(() => w.status === "active" ? db.workouts.where("status").equals("completed").toArray() : Promise.resolve([]), [w.status]) ?? [];
+  const focus = setFocus(w);
+  const nextExercise = w.exercises.find(e => e.sets.some(s => s.id === focus.next));
+  useEffect(() => {
+    if (!focus.current) return;
+    const row = document.querySelector('.set[aria-current="step"]');
+    row?.closest('details')?.setAttribute('open', '');
+    row?.scrollIntoView({ block: 'center', behavior: 'auto' });
+  }, [focus.current]);
   const modify = (idx: number, e: Item) =>
     save({ ...w, exercises: w.exercises.map((x, i) => (i === idx ? e : x)) });
   return (
@@ -406,7 +418,10 @@ function WorkoutFields({
                 ),
               });
             return (
-              <React.Fragment key={s.id}><div className={`set ${s.completed ? "done" : ""}`}>
+              <React.Fragment key={s.id}>
+              {focus.current === s.id && <p className="set-state">{t('currentSet')} · {j + 1}</p>}
+              {focus.next === s.id && <p className="set-state next">{t('nextSet')} · {j + 1}</p>}
+              <div aria-current={focus.current === s.id ? "step" : undefined} className={`set ${s.completed ? "done" : ""} ${focus.current === s.id ? "current" : ""} ${focus.next === s.id ? "next" : ""}`}>
                 <button
                   aria-label="Satz löschen"
                   onClick={() =>
@@ -451,6 +466,7 @@ function WorkoutFields({
                   }}
                 />
               </div>
+              {focus.current === s.id && nextExercise && <small className="next-preview">Als Nächstes: {nextExercise.name} · Satz {nextExercise.sets.findIndex(s => s.id === focus.next) + 1}</small>}
               {previous && <PreviousSet previous={previous.sets[j]} date={previous.date} completed={s.completed} onApply={update} />}
               </React.Fragment>
             );
@@ -530,12 +546,12 @@ function Editor() {
   const w = useLiveQuery(() => db.workouts.get(wid!), [wid]);
   const nav = useNavigate();
   const [msg, setMsg] = useState("");
-  if (!w) return <p>Workout wird geladen …</p>;
+  if (!w) return <p>Training wird geladen …</p>;
   const save = (next: Workout) => {
     db.workouts
       .put(next)
       .then(() => setMsg("Gespeichert"))
-      .catch((e) => setMsg(String(e)));
+      .catch((e) => setMsg(germanError(e)));
   };
   return (
     <>
@@ -544,7 +560,7 @@ function Editor() {
           ? "Vorlage"
           : w.status === "active"
             ? "Im Training"
-            : "Workout"}
+            : "Training"}
       </h1>
       <p>
         {count(w)} abgeschlossene Sätze · {fmt(volume(w))} kg ·{" "}
@@ -563,7 +579,7 @@ function Editor() {
               return error(Error("Name und Datum fehlen"));
             if (
               confirm(
-                `Workout abschließen? ${w.exercises.length} Übungen, ${count(w)} Sätze, ${fmt(volume(w))} kg.`,
+                `Training abschließen? ${w.exercises.length} Übungen, ${count(w)} Sätze, ${fmt(volume(w))} kg.`,
               )
             ) {
               await db.transaction("rw", db.workouts, db.settings, async () => {
@@ -583,18 +599,18 @@ function Editor() {
             }
           }}
         >
-          Workout abschließen
+          Training abschließen
         </button>
       )}
       <button
         onClick={async () => {
-          if (confirm("Dieses Workout endgültig löschen?")) {
+          if (confirm("Dieses Training endgültig löschen?")) {
             await db.workouts.delete(w.id);
             nav("/training");
           }
         }}
       >
-        Workout löschen
+        Training löschen
       </button>
     </>
   );
@@ -734,7 +750,7 @@ function Library() {
                 onClick={() => {
                   if (
                     confirm(
-                      "Übung löschen? Historische Workouts bleiben erhalten.",
+                      "Übung löschen? Historische Trainings bleiben erhalten.",
                     )
                   )
                     db.exercises.delete(e.id);
@@ -795,7 +811,7 @@ function History() {
           <WorkoutCard key={w.id} w={w} />
         ))}
       {!ws.some((w) => w.date === selected) && (
-        <p>Für diesen Tag ist kein Workout gespeichert.</p>
+        <p>Für diesen Tag ist kein Training gespeichert.</p>
       )}
     </>
   );
@@ -848,7 +864,7 @@ function Stats() {
       ? [{ date: w.date, weight: Math.max(...weights) }]
       : [];
   });
-  if (!filtered.length) return <><h1>Dein Fortschritt</h1><select aria-label="Zeitraum" value={range} onChange={e=>R(e.target.value)}><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="365">1 Jahr</option><option value="all">Gesamt</option></select><div className="metrics"><article><b>0</b><small>Workouts</small></article><article><b>0</b><small>Volumen · kg</small></article></div><article className="empty"><ChartNoAxesCombined size={32}/><h2>Noch keine Trainingsdaten</h2><p>Volumen, Häufigkeit, Kraftentwicklung und Rekorde erscheinen nach deinem ersten abgeschlossenen Workout im gewählten Zeitraum.</p><Link className="button primary" to="/training">Zum Training</Link></article></>;
+  if (!filtered.length) return <><h1>Dein Fortschritt</h1><select aria-label="Zeitraum" value={range} onChange={e=>R(e.target.value)}><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="365">1 Jahr</option><option value="all">Gesamt</option></select><div className="metrics"><article><b>0</b><small>Trainings</small></article><article><b>0</b><small>Volumen · kg</small></article></div><article className="empty"><ChartNoAxesCombined size={32}/><h2>Noch keine Trainingsdaten</h2><p>Volumen, Häufigkeit, Kraftentwicklung und Rekorde erscheinen nach deinem ersten abgeschlossenen Training im gewählten Zeitraum.</p><Link className="button primary" to="/training">Zum Training</Link></article></>;
   return (
     <>
       <h1>Dein Fortschritt</h1>
@@ -861,7 +877,7 @@ function Stats() {
       <div className="metrics">
         <article>
           <b>{filtered.length}</b>
-          <small>Workouts</small>
+          <small>Trainings</small>
         </article>
         <article>
           <b>{fmt(filtered.reduce((s, w) => s + volume(w), 0))}</b>
@@ -882,12 +898,12 @@ function Stats() {
               <BarChart data={[...groups.values()]}>
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis width={45} />
-                <Tooltip />
-                <Bar dataKey={key} fill="#171717" radius={[4, 4, 0, 0]} />
+                <Tooltip contentStyle={{background:"var(--surface)",borderColor:"var(--line)",color:"var(--ink)"}} />
+                <Bar name={key === "volume" ? "Trainingsvolumen (kg)" : "Trainings"} dataKey={key} fill="var(--ink)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p>Deine Diagramme entstehen mit deinem ersten Workout.</p>
+            <p>Deine Diagramme entstehen mit deinem ersten Training.</p>
           )}
         </article>
       ))}
@@ -903,8 +919,8 @@ function Stats() {
             <LineChart data={strength}>
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis />
-              <Tooltip />
-              <Line dataKey="weight" stroke="#171717" />
+              <Tooltip contentStyle={{background:"var(--surface)",borderColor:"var(--line)",color:"var(--ink)"}} />
+              <Line name="Gewicht (kg)" dataKey="weight" stroke="var(--ink)" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -930,6 +946,7 @@ function Settings() {
   return (
     <>
       <h1>Einstellungen</h1>
+      <ThemePicker />
       <article>
         <h2>Pausentimer</h2>
         <label>
@@ -994,7 +1011,7 @@ function Settings() {
                 const b = backupSchema.parse(JSON.parse(await f.text()));
                 if (
                   confirm(
-                    `${b.workouts.length} Workouts und ${b.exercises.length} Übungen wiederherstellen? Alle vorhandenen Daten werden ersetzt.`,
+                    `${b.workouts.length} Trainings und ${b.exercises.length} Übungen wiederherstellen? Alle vorhandenen Daten werden ersetzt.`,
                   )
                 ) {
                   await restore(b);
@@ -1038,7 +1055,7 @@ function Settings() {
         </button>
       </article>
       <p>
-        SET · Classic UI
+        SET · Ansicht
         <br />
         Auf dem iPhone: Safari → Teilen → Zum Home-Bildschirm.
       </p>

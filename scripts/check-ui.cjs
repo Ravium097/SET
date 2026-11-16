@@ -115,7 +115,7 @@ const origin = "http://127.0.0.1:4178";
       "25",
     );
     assert(await page.getByLabel("Satz abgeschlossen").isChecked());
-    await page.getByRole("button", { name: "Workout abschließen" }).click();
+    await page.getByRole("button", { name: "Training abschließen" }).click();
     await page.waitForURL("**/history");
     await page.getByRole("link", { name: /QA Template/ }).waitFor();
     await page.goto(origin + "/stats");

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export const RELEASE = "Classic UI · 03";
+export const RELEASE = "Ansicht · 04";
 let registrationPromise: Promise<ServiceWorkerRegistration> | undefined;
 function registration() {
   return (registrationPromise ??= navigator.serviceWorker
@@ -100,7 +100,7 @@ export function UpdateControl({ compact = false }: { compact?: boolean }) {
   async function reload() {
     if (
       !confirm(
-        "SET neu laden? Beende zuerst deine aktuelle Eingabe und warte auf „Gespeichert“. Gespeicherte Workouts bleiben erhalten.",
+        "SET neu laden? Beende zuerst deine aktuelle Eingabe und warte auf „Gespeichert“. Gespeicherte Trainings bleiben erhalten.",
       )
     )
       return;
