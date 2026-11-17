@@ -1,3 +1,4 @@
+import { StartupBoundary } from "./components/pwa/StartupBoundary";
 import React, { useState, useEffect, useId } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -413,7 +414,10 @@ function WorkoutExerciseHeading({
               .then(() => {
                 setDraft((current) => current === edit ? { ...edit, saved: true } : current);
               })
-              .catch(error);
+              .catch((e: unknown) => {
+    const status = document.getElementById("startup-status");
+    if (status) status.textContent = "Start fehlgeschlagen (" + (e instanceof Error ? e.name : "unbekannt") + "). Deine Trainings bleiben gespeichert. Öffne die Starthilfe.";
+  });
           }}
         />
       )}
@@ -1155,10 +1159,13 @@ init()
   .then(() =>
     createRoot(document.getElementById("root")!).render(
       <React.StrictMode>
-        <BrowserRouter>
+        <StartupBoundary><BrowserRouter>
           <App />
-        </BrowserRouter>
+        </BrowserRouter></StartupBoundary>
       </React.StrictMode>,
     ),
   )
-  .catch(error);
+  .catch((e: unknown) => {
+    const status = document.getElementById("startup-status");
+    if (status) status.textContent = "Start fehlgeschlagen (" + (e instanceof Error ? e.name : "unbekannt") + "). Deine Trainings bleiben gespeichert. Öffne die Starthilfe.";
+  });

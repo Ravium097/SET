@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwind from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
+  build: { target: "safari15" },
   plugins: [
     react(),
     tailwind(),
@@ -27,6 +28,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        navigateFallbackDenylist: [/^\/recovery\.html$/],
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],

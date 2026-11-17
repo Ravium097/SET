@@ -1,0 +1,16 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SET · Starthilfe</title><style>
+body{margin:0;background:#f7f7f7;color:#172638;font:17px/1.6 -apple-system,sans-serif}main{max-width:520px;margin:auto;padding:32px 24px}button,a{display:block;margin:16px 0;padding:16px;border:1px solid #b4bdc9;border-radius:12px;background:white;color:#172638;font:inherit}small{display:block}
+</style></head><body><main><h1>SET · Starthilfe</h1><p>Schließe zuerst weitere SET-Fenster in Safari und die installierte App.</p><p>Hier kannst du die App-Dateien neu laden. Trainings, Vorlagen und Einstellungen in der lokalen Datenbank bleiben erhalten.</p><button id="repair">App-Dateien aktualisieren</button><p id="status" role="status"></p><a href="/">Zurück zu SET</a><small>Die Starthilfe benötigt eine Internetverbindung. Keine Safari-Websitedaten löschen.</small></main><script>
+document.getElementById('repair').onclick=async function(){
+var button=this,status=document.getElementById('status');button.disabled=true;
+try{
+if(!navigator.onLine)throw Error('Du bist offline. Bitte verbinde das iPhone mit dem Internet.');
+var response=await fetch('/index.html?repair='+Date.now(),{cache:'no-store'});
+if(!response.ok)throw Error('Die aktuelle Version ist gerade nicht erreichbar.');
+if('serviceWorker' in navigator){var registrations=await navigator.serviceWorker.getRegistrations();for(var r of registrations){if(new URL(r.scope).origin===location.origin)await r.unregister();}}
+if('caches' in window){for(var key of await caches.keys()){if(key.indexOf('workbox-')===0)await caches.delete(key);}}
+status.textContent='App-Dateien aktualisiert. Schließe dieses Fenster und öffne SET erneut. Deine Trainings wurden nicht verändert.';
+}catch(e){status.textContent=e.message||'Aktualisierung fehlgeschlagen. Bitte erneut versuchen.';}
+finally{button.disabled=false;}
+};
+</script></body></html>
