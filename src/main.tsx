@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useId } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -20,6 +20,7 @@ import {
   Settings as Gear,
   Plus,
   ArrowRight,
+  StickyNote,
 } from "lucide-react";
 import {
   format,
@@ -351,6 +352,72 @@ export function Numeric({value,onChange,step,label}:{value:number|null;onChange:
  function change(n:number){setDraft(String(n));onChange(n)}
  return <div className="numeric"><button aria-label={`${label} verringern`} onClick={()=>change(Math.max(0,(value??0)-step))}>−</button><input aria-label={label} inputMode={step===1?'numeric':'decimal'} value={draft} placeholder="–" onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onChange={e=>{const text=e.target.value;const normalized=text.replace(',','.');if(normalized===''||(step===1?/^\d+$/:/^\d+(\.\d*)?$/).test(normalized)){setDraft(text);onChange(normalized===''?null:Number(normalized))}}}/><button aria-label={`${label} erhöhen`} onClick={()=>change((value??0)+step)}>+</button></div>
 }
+function WorkoutExerciseHeading({
+  item,
+  exercise,
+}: {
+  item: Item;
+  exercise: Exercise | undefined;
+}) {
+  const fieldId = useId();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ text: string; saved: boolean } | null>(null);
+  const savedNotes = exercise?.notes;
+  useEffect(() => {
+    if (draft?.saved && draft.text === savedNotes) setDraft(null);
+  }, [draft, savedNotes]);
+
+  return (
+    <>
+      <summary className="workout-exercise-heading">
+        <span>{item.name}</span>
+        <small>
+          {item.sets.filter((set) => set.completed).length}/{item.sets.length} Sätze
+        </small>
+        {exercise && (
+          <button
+            type="button"
+            className="exercise-note-toggle"
+            aria-label={`Notiz zu ${item.name}`}
+            aria-expanded={open}
+            aria-controls={fieldId}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setOpen((current) => !current);
+              const card = event.currentTarget.closest("details");
+              if (!open && card) card.open = true;
+            }}
+          >
+            <StickyNote size={16} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        )}
+      </summary>
+      {exercise && (
+        <textarea
+          id={fieldId}
+          className="exercise-note"
+          hidden={!open}
+          aria-label={`Notiz zu ${item.name}`}
+          placeholder="Notiz …"
+          rows={3}
+          value={draft?.text ?? exercise.notes}
+          onChange={(event) => {
+            const edit = { text: event.target.value, saved: false };
+            setDraft(edit);
+            db.exercises
+              .update(exercise.id, { notes: edit.text })
+              .then(() => {
+                setDraft((current) => current === edit ? { ...edit, saved: true } : current);
+              })
+              .catch(error);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 function WorkoutFields({
   w,
   save,
@@ -392,12 +459,10 @@ function WorkoutFields({
         const previous = w.status === "active" ? previousPerformance(w, i, history) : null;
         return (
         <details key={e.id} open={w.status !== "active" || e.sets.some(set => set.id === focus.current)}>
-          <summary>
-            {e.name}
-            <small>
-              {e.sets.filter((s) => s.completed).length}/{e.sets.length} Sätze
-            </small>
-          </summary>
+          <WorkoutExerciseHeading
+            item={e}
+            exercise={ex.find((entry) => entry.id === e.exerciseId)}
+          />
           <input
             aria-label="Übungsname"
             value={e.name}
@@ -571,7 +636,7 @@ function Editor() {
         min
       </p>
       <small role="status">{msg}</small>
-      <WorkoutFields w={w} save={save} />
+      <WorkoutFields key={w.id} w={w} save={save} />
       {w.status === "active" && (
         <button
           className="primary action"
