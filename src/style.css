@@ -428,3 +428,4 @@ select:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); out
 .next-preview { display: block; margin: 6px 0 10px; overflow-wrap: anywhere; }
 
 @media (max-width: 360px) { .set.current .numeric input { font-size: 24px; } }
+#rest-duration-status { display: block; margin-top: 6px; }

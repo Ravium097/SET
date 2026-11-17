@@ -61,6 +61,7 @@ import {
 import "./style.css";
 import { t, germanError } from "./i18n/de";
 import { applyTheme, readTheme } from "./services/theme";
+import { RestDuration } from "./components/settings/RestDuration";
 import { ThemePicker } from "./components/settings/ThemePicker";
 import { Onboarding } from "./components/onboarding/Onboarding";
 import { setFocus } from "./services/setFocus";
@@ -79,7 +80,7 @@ function App() {
   const { pathname } = useLocation();
   useEffect(() => { document.querySelector("main")?.scrollTo(0, 0); }, [pathname]);
   const settings = useLiveQuery(() => db.settings.get("settings")) ?? defaults;
-  const [now, tick] = useState(Date.now());
+  const [, tick] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => tick(Date.now()), 1000);
     return () => clearInterval(t);
@@ -87,7 +88,7 @@ function App() {
   const remaining =
     settings.paused ??
     (settings.timerEnd
-      ? Math.max(0, Math.ceil((settings.timerEnd - now) / 1000))
+      ? Math.max(0, Math.ceil((settings.timerEnd - Date.now()) / 1000))
       : null);
   return (
     <>
@@ -942,27 +943,18 @@ function Stats() {
   );
 }
 function Settings() {
-  const s = useLiveQuery(() => db.settings.get("settings")) ?? defaults;
+  const s = useLiveQuery(() => db.settings.get("settings"));
+  if (!s) return <p>Einstellungen werden geladen …</p>;
   return (
     <>
       <h1>Einstellungen</h1>
       <ThemePicker />
       <article>
         <h2>Pausentimer</h2>
-        <label>
-          Standardpause · Sekunden
-          <input
-            type="number"
-            min="1"
-            max="3600"
-            value={s.rest}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (n >= 1 && n <= 3600)
-                db.settings.update("settings", { rest: n });
-            }}
-          />
-        </label>
+        <RestDuration value={s.rest} onSave={async seconds => {
+          const updated = await db.settings.update("settings", { rest: seconds });
+          if (!updated) throw new Error("Settings missing");
+        }} />
         <label>
           <input
             type="checkbox"
