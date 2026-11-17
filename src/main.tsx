@@ -48,6 +48,7 @@ import {
   id,
   defaults,
   emptySet,
+  isCompletedWork,
   volume,
   count,
   exportData,
@@ -59,6 +60,12 @@ import {
   type Item,
   type Exercise,
 } from "./data";
+import { ThemeStudio, useTheme } from "./features/ThemeStudio";
+import { MuscleMap } from "./features/MuscleMap";
+import { ExerciseSwap } from "./features/ExerciseSwap";
+import { movements, movementOf } from "./features/swap";
+import { LiveSummary } from "./features/LiveSummary";
+import { EffortFields } from "./features/EffortFields";
 import "./style.css";
 const day = (d = new Date()) => format(d, "yyyy-MM-dd");
 const fmt = (n: number) =>
@@ -73,6 +80,7 @@ function App() {
   const { pathname } = useLocation();
   useEffect(() => { document.querySelector("main")?.scrollTo(0, 0); }, [pathname]);
   const settings = useLiveQuery(() => db.settings.get("settings")) ?? defaults;
+  useTheme(settings.theme);
   const [now, tick] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => tick(Date.now()), 1000);
@@ -167,69 +175,66 @@ function App() {
   );
 }
 function Dashboard() {
-  const all = useLiveQuery(() => db.workouts.toArray()) ?? [];
-  const done = all
-    .filter((w) => w.status === "completed")
-    .sort((a, b) => b.date.localeCompare(a.date));
-  const active = all.find((w) => w.status === "active");
-  return (
-    <>
-      <p className="eyebrow">
-        {format(new Date(), "EEEE, d. MMMM", { locale: de })}
-      </p>
-      <h1>
-        Dein Training.
-        <br />
-        <span>Dein Fortschritt.</span>
-      </h1>
-      <p className="dashboard-tagline">Ein Satz nach dem anderen.</p>
-      <div className="metrics">
-        <article>
-          <b>{done.length}</b>
-          <small>Workouts gesamt</small>
-        </article>
-        <article>
-          <b>{fmt(done.reduce((s, w) => s + volume(w), 0))}</b>
-          <small>Volumen · kg</small>
-        </article>
-        <article>
-          <b>
-            {
-              done.filter(
-                (w) =>
-                  w.date >= day(startOfWeek(new Date(), { weekStartsOn: 1 })) &&
-                  w.date <= day(),
-              ).length
-            }
-          </b>
-          <small>Diese Woche</small>
-        </article>
+  const all = useLiveQuery(() => db.workouts.toArray());
+  const [selected, select] = useState(day());
+  const [range, setRange] = useState("30");
+  const [exercise, setExercise] = useState("");
+  const done = (all ?? []).filter(w => w.status === "completed").sort((a,b) => b.date.localeCompare(a.date));
+  const active = all?.find(w => w.status === "active");
+  const today = new Date();
+  const monday = startOfWeek(today, { weekStartsOn: 1 });
+  const days = Array.from({length: 7}, (_, i) => {
+    const d = new Date(monday); d.setDate(d.getDate() + i); return d;
+  });
+  const week = done.filter(w => w.date >= day(monday) && w.date <= day());
+  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - Number(range) + 1);
+  const filtered = done.filter(w => (range === "all" || w.date >= day(cutoff)) && w.date <= day());
+  const names = [...new Set(done.flatMap(w => w.exercises.map(e => e.name)))].sort();
+  const points = [...filtered].reverse().filter(w => !exercise || w.exercises.some(e => e.name === exercise)).map(w => ({
+    date: w.date,
+    value: volume({...w, exercises: w.exercises.filter(e => !exercise || e.name === exercise)}),
+  }));
+  const chart = Array.from(points.reduce((map, p) => map.set(p.date, (map.get(p.date) ?? 0) + p.value), new Map<string, number>()), ([date, value]) => ({date, value}));
+  if (!all) return <p role="status">Dashboard wird geladen …</p>;
+  return <div className="dashboard">
+    <p className="eyebrow">{format(today, "EEEE, d. MMMM", {locale: de})}</p>
+    <h1>Dein Training.<br/><span>Alles im Blick.</span></h1>
+    <article className="dashboard-start">
+      <small>{active ? "DEIN AKTIVES WORKOUT" : "BEREIT FÜR DEINEN NÄCHSTEN SATZ?"}</small>
+      <h2>{active ? active.name : "Heute ist dein Trainingstag."}</h2>
+      <p>{active ? "Mach dort weiter, wo du aufgehört hast." : "Wähle eine Vorlage oder starte ein freies Workout."}</p>
+      <Link className="primary action" to={active ? `/workout/${active.id}` : "/training"}><Dumbbell/>{active ? "Workout fortsetzen" : "Workout starten"}<ArrowRight/></Link>
+    </article>
+    <section aria-labelledby="week-heading">
+      <div className="row"><h2 id="week-heading">Deine Woche</h2><Link to="/history">Verlauf →</Link></div>
+      <p>{week.length} abgeschlossene {week.length === 1 ? "Einheit" : "Einheiten"} · {week.reduce((n,w) => n + count(w), 0)} Sätze</p>
+      <div className="dashboard-week">{days.map(d => {
+        const key = day(d), n = done.filter(w => w.date === key).length;
+        return <button key={key} aria-pressed={selected === key} aria-label={`${format(d, "EEEE, d. MMMM", {locale: de})}: ${n} Workouts`} onClick={() => select(key)}><small>{format(d, "EEEEEE", {locale: de})}</small><strong>{d.getDate()}</strong><span>{n ? "●" : "–"}</span></button>;
+      })}</div>
+      <div aria-live="polite"><p>{format(new Date(selected + "T12:00:00"), "EEEE, d. MMMM", {locale: de})}</p>
+      {done.filter(w => w.date === selected).map(w => <WorkoutCard key={w.id} w={w}/>)}
+      {!done.some(w => w.date === selected) && <p className="dashboard-note">Keine abgeschlossenen Workouts an diesem Tag.</p>}</div>
+    </section>
+    <section aria-labelledby="progress-heading">
+      <div className="row"><h2 id="progress-heading">Dein Fortschritt</h2><Link to="/stats">Details →</Link></div>
+      <div className="dashboard-filters">
+        <label>Zeitraum<select value={range} onChange={e => setRange(e.target.value)}><option value="7">7 Tage</option><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="all">Gesamt</option></select></label>
+        <label>Übung<select value={exercise} onChange={e => setExercise(e.target.value)}><option value="">Alle Übungen</option>{names.map(n => <option key={n}>{n}</option>)}</select></label>
       </div>
-      <Link
-        className="primary action"
-        to={active ? `/workout/${active.id}` : "/training"}
-      >
-        <Dumbbell />
-        {active ? "Workout fortsetzen" : "Workout starten"}
-        <ArrowRight />
-      </Link>
-      <h2>Letztes Workout</h2>
-      {done[0] ? (
-        <WorkoutCard w={done[0]} />
-      ) : (
-        <article className="empty">
-          <Dumbbell size={36} />
-          <h3>Dein erster Satz wartet.</h3>
-          <p>
-            Hier beginnt deine Trainingsgeschichte.
-            <br />
-            Starte dein erstes Workout.
-          </p>
-        </article>
-      )}
-
-    </>
-  );
+      <article>
+        <small>TRAININGSVOLUMEN · GEWICHT × WIEDERHOLUNGEN</small>
+        <h2>{fmt(chart.reduce((n,p) => n + p.value, 0))} kg</h2>
+        {chart.length ? <><div style={{height: 220}}><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} accessibilityLayer><XAxis dataKey="date" tickFormatter={d => format(new Date(d + "T12:00:00"), "dd.MM.")}/><YAxis width={50}/><Tooltip formatter={v => [`${fmt(Number(v))} kg`, "Volumen"]}/><Bar dataKey="value" fill="var(--ink)" radius={[5,5,0,0]}/></BarChart></ResponsiveContainer></div><details><summary>Werte als Liste anzeigen</summary>{chart.map(p => <p key={p.date}>{format(new Date(p.date + "T12:00:00"), "dd.MM.yyyy")}: {fmt(p.value)} kg</p>)}</details></> : <p>Noch keine abgeschlossenen Workouts für diese Auswahl.</p>}
+        <small>Nur abgeschlossene Sätze zählen. Körpergewichtsübungen mit 0 kg ergeben kein Gewichtsvolumen.</small>
+      </article>
+    </section>
+    <section aria-labelledby="recent-heading"><div className="row"><h2 id="recent-heading">Letzte Workouts</h2><Link to="/history">Alle →</Link></div>
+      {done.slice(0,3).map(w => <details key={w.id}><summary><strong>{w.name}</strong><br/><small>{format(new Date(w.date + "T12:00:00"), "dd.MM.yyyy")} · {count(w)} Sätze{w.duration !== null ? ` · ${Math.round(w.duration / 60)} min` : ""}</small></summary>
+      {w.exercises.map(e => <p key={e.id}>{e.name} · {e.sets.filter(isCompletedWork).length} Sätze</p>)}<Link className="action" to={`/workout/${w.id}`}>Workout öffnen <ArrowRight size={16}/></Link></details>)}
+      {!done.length && <article className="empty"><Dumbbell size={36}/><h3>Dein erster Satz wartet.</h3><p>Nach deinem ersten abgeschlossenen Workout siehst du hier deinen Fortschritt.</p></article>}
+    </section>
+  </div>;
 }
 function WorkoutCard({ w }: { w: Workout }) {
   return (
@@ -265,7 +270,7 @@ function Training() {
         ? structuredClone(template.exercises).map((e) => ({
             ...e,
             id: id(),
-            sets: e.sets.map((s) => ({ ...s, id: id(), completed: false })),
+            sets: e.sets.map((s) => ({ ...s, id: id(), completed: false, rpe: null, rir: null })),
           }))
         : [],
     };
@@ -407,16 +412,21 @@ function WorkoutExerciseHeading({
 function WorkoutFields({
   w,
   save,
+  focus = false,
 }: {
   w: Workout;
   save: (w: Workout) => void;
+  focus?: boolean;
 }) {
   const ex = useLiveQuery(() => db.exercises.toArray()) ?? [];
   const [query, setQuery] = useState("");
+  const current = w.exercises.flatMap(e => e.sets.map(s => ({item:e.id, set:s}))).find(x => !x.set.completed);
+  useEffect(() => { if (focus) document.querySelectorAll<HTMLDetailsElement>(".workout-fields > details").forEach(d => {d.open = true;}); }, [focus]);
   const modify = (idx: number, e: Item) =>
     save({ ...w, exercises: w.exercises.map((x, i) => (i === idx ? e : x)) });
   return (
-    <>
+    <div className="workout-fields">
+      {focus && !current && <p className="focus-finished">Alle Sätze abgeschlossen. Zurück zur Übersicht, um das Workout zu beenden.</p>}
       <label>
         Name
         <input
@@ -433,7 +443,7 @@ function WorkoutFields({
         />
       </label>
       {w.exercises.map((e, i) => (
-        <details key={e.id} open>
+        <details key={e.id} open data-current={current?.item === e.id}>
           <WorkoutExerciseHeading
             item={e}
             exercise={ex.find((entry) => entry.id === e.exerciseId)}
@@ -443,6 +453,7 @@ function WorkoutFields({
             value={e.name}
             onChange={(ev) => modify(i, { ...e, name: ev.target.value })}
           />
+          <ExerciseSwap w={w} item={e} library={ex} save={save}/>
           <div className="setheading">
             <span>Satz</span>
             <span>Gewicht · kg</span>
@@ -458,9 +469,10 @@ function WorkoutFields({
                 ),
               });
             return (
-              <div className={`set ${s.completed ? "done" : ""}`} key={s.id}>
+              <React.Fragment key={s.id}><div data-current={current?.set.id === s.id} className={`set ${s.completed ? "done" : ""}`}>
                 <button
                   aria-label="Satz löschen"
+                  disabled={focus}
                   onClick={() =>
                     modify(i, {
                       ...e,
@@ -468,7 +480,7 @@ function WorkoutFields({
                     })
                   }
                 >
-                  {j + 1}
+                  <span className="focus-set-label">Satz&nbsp;</span>{s.type === "warmup" ? "W" : j + 1}
                   <small>−</small>
                 </button>
                 <Numeric
@@ -502,7 +514,24 @@ function WorkoutFields({
                       });
                   }}
                 />
+                {focus && <button className="focus-complete primary" onClick={async () => {
+                    const completed = !s.completed;
+                    update({ completed });
+                    const cfg = await db.settings.get("settings");
+                    if (completed && w.status === "active" && cfg?.auto)
+                      await db.settings.update("settings", {
+                        timerEnd:
+                          Date.now() +
+                          (ex.find((x) => x.id === e.exerciseId)?.rest ??
+                            cfg.rest) *
+                            1000,
+                        paused: null,
+                      });
+                }}>Satz abschließen ✓</button>}
               </div>
+              <label className="set-options">Satztyp<select aria-label={`Satztyp Satz ${j + 1}`} value={s.type ?? "work"} onChange={ev => update({type: ev.target.value as "work" | "warmup"})}><option value="work">Arbeitssatz</option><option value="warmup">W · Aufwärmsatz</option></select></label>
+              <EffortFields set={s} update={update}/>
+              </React.Fragment>
             );
           })}
           <button
@@ -554,6 +583,7 @@ function WorkoutFields({
                   id: id(),
                   exerciseId: e.id,
                   name: e.name,
+                  muscle: e.muscle, equipment: e.equipment, movement: movementOf(e),
                   sets: [emptySet()],
                 },
               ],
@@ -571,7 +601,7 @@ function WorkoutFields({
         </select>
         <Link to="/library">Bibliothek verwalten →</Link>
       </article>
-    </>
+    </div>
   );
 }
 function Editor() {
@@ -579,6 +609,8 @@ function Editor() {
   const w = useLiveQuery(() => db.workouts.get(wid!), [wid]);
   const nav = useNavigate();
   const [msg, setMsg] = useState("");
+  const [focus, setFocus] = useState(false);
+  useEffect(() => {document.body.classList.toggle("focus-mode", focus); return () => document.body.classList.remove("focus-mode");}, [focus]);
   if (!w) return <p>Workout wird geladen …</p>;
   const save = (next: Workout) => {
     db.workouts
@@ -587,7 +619,8 @@ function Editor() {
       .catch((e) => setMsg(String(e)));
   };
   return (
-    <>
+    <div className={focus ? "editor focus-workout" : "editor"}>
+      {w.status === "active" && <button className="focus-toggle" aria-pressed={focus} onClick={() => setFocus(!focus)}>{focus ? "← Normale Ansicht" : "Focus Mode"}</button>}
       <h1>
         {w.status === "template"
           ? "Vorlage"
@@ -602,8 +635,9 @@ function Editor() {
           : Math.round((w.duration ?? 0) / 60)}{" "}
         min
       </p>
+      {w.status === "active" && <LiveSummary w={w}/>}
       <small role="status">{msg}</small>
-      <WorkoutFields key={w.id} w={w} save={save} />
+      <WorkoutFields key={w.id} w={w} save={save} focus={focus} />
       {w.status === "active" && (
         <button
           className="primary action"
@@ -645,7 +679,7 @@ function Editor() {
       >
         Workout löschen
       </button>
-    </>
+    </div>
   );
 }
 function Library() {
@@ -718,6 +752,7 @@ function Library() {
               <option key={x}>{x}</option>
             ))}
           </select>
+          <label>Bewegungsmuster<select value={movementOf(edit)} onChange={e => Edit({...edit,movement:e.target.value})}><option value="">Nicht zugeordnet</option>{movements.map(m => <option key={m}>{m}</option>)}</select></label>
           <input
             placeholder="Notizen"
             value={edit.notes}
@@ -881,24 +916,24 @@ function Stats() {
   const sets = filtered.flatMap((w) =>
     w.exercises
       .filter((e) => e.name === selected)
-      .flatMap((e) => e.sets.filter((s) => s.completed)),
+      .flatMap((e) => e.sets.filter(isCompletedWork)),
   );
   const strength = filtered.flatMap((w) => {
     const weights = w.exercises
       .filter((e) => e.name === selected)
       .flatMap((e) =>
         e.sets
-          .filter((s) => s.completed && s.weight !== null)
+          .filter((s) => isCompletedWork(s) && s.weight !== null)
           .map((s) => s.weight!),
       );
     return weights.length
       ? [{ date: w.date, weight: Math.max(...weights) }]
       : [];
   });
-  if (!filtered.length) return <><h1>Dein Fortschritt</h1><select aria-label="Zeitraum" value={range} onChange={e=>R(e.target.value)}><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="365">1 Jahr</option><option value="all">Gesamt</option></select><div className="metrics"><article><b>0</b><small>Workouts</small></article><article><b>0</b><small>Volumen · kg</small></article></div><article className="empty"><ChartNoAxesCombined size={32}/><h2>Noch keine Trainingsdaten</h2><p>Volumen, Häufigkeit, Kraftentwicklung und Rekorde erscheinen nach deinem ersten abgeschlossenen Workout im gewählten Zeitraum.</p><Link className="button primary" to="/training">Zum Training</Link></article></>;
+  if (!filtered.length) return <><h1>Dein Fortschritt</h1><MuscleMap/><select aria-label="Zeitraum" value={range} onChange={e=>R(e.target.value)}><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="365">1 Jahr</option><option value="all">Gesamt</option></select><div className="metrics"><article><b>0</b><small>Workouts</small></article><article><b>0</b><small>Volumen · kg</small></article></div><article className="empty"><ChartNoAxesCombined size={32}/><h2>Noch keine Trainingsdaten</h2><p>Volumen, Häufigkeit, Kraftentwicklung und Rekorde erscheinen nach deinem ersten abgeschlossenen Workout im gewählten Zeitraum.</p><Link className="button primary" to="/training">Zum Training</Link></article></>;
   return (
     <>
-      <h1>Dein Fortschritt</h1>
+      <h1>Dein Fortschritt</h1><MuscleMap/>
       <select value={range} onChange={(e) => R(e.target.value)}>
         <option value="30">30 Tage</option>
         <option value="90">90 Tage</option>
@@ -930,7 +965,7 @@ function Stats() {
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis width={45} />
                 <Tooltip />
-                <Bar dataKey={key} fill="#171717" radius={[4, 4, 0, 0]} />
+                <Bar dataKey={key} fill="var(--ink)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -951,7 +986,7 @@ function Stats() {
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis />
               <Tooltip />
-              <Line dataKey="weight" stroke="#171717" />
+              <Line dataKey="weight" stroke="var(--ink)" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -977,6 +1012,7 @@ function Settings() {
   return (
     <>
       <h1>Einstellungen</h1>
+      <ThemeStudio settings={s}/>
       <article>
         <h2>Pausentimer</h2>
         <label>

@@ -1,0 +1,37 @@
+import "fake-indexeddb/auto";
+import Dexie from "dexie";
+import { expect,it } from "vitest";
+import { db, defaults, exportData, restore, emptySet } from "../data";
+it("upgrades a real v1 database without losing IDs, notes, timer or legacy sets",async()=>{
+  db.close();
+  await Dexie.delete("SET");
+  const old = new Dexie("SET");
+  old.version(1).stores({exercises:"id,name,muscle,equipment",workouts:"id,status,date",settings:"id"});
+  const e={id:"exercise",name:"Press",muscle:"Brust",equipment:"Maschine",favorite:true,notes:"Keep me"};
+  const s={id:"set",weight:30,reps:8,completed:true};
+  const w={id:"legacy",name:"Old",date:"2026-11-17",started:123,duration:null,status:"active",exercises:[{id:"item",exerciseId:e.id,name:e.name,sets:[s]}]};
+  await old.table("exercises").put(e);
+  await old.table("workouts").put(w);
+  await old.table("settings").put({...defaults,timerEnd:123456});
+  old.close();
+  await db.open();
+  const result=await db.workouts.get("legacy");
+  expect(result?.exercises[0]).toMatchObject({muscle:"Brust",equipment:"Maschine",sets:[s]});
+  expect(result?.id).toBe(w.id);
+  expect(await db.exercises.get(e.id)).toEqual(e);
+  expect((await db.settings.get("settings"))?.timerEnd).toBe(123456);
+  await db.exercises.delete(e.id);
+  expect((await db.workouts.get("legacy"))?.exercises[0].muscle).toBe("Brust");
+});
+it("roundtrips new fields and rejects invalid effort without damaging existing data",async()=>{
+  await db.workouts.put({id:"new",name:"New",date:"2026-11-17",status:"completed",started:0,duration:60,exercises:[{id:"item2",exerciseId:"deleted",name:"Press",muscle:"Brust",replacedFrom:"source",sets:[{...emptySet(),type:"work",rpe:8.5,rir:2}]}]});
+  await db.settings.update("settings",{theme:"forest"});
+  const backup=await exportData();
+  await restore(backup);
+  expect((await db.workouts.get("new"))?.exercises[0].sets[0]).toMatchObject({rpe:8.5,rir:2,type:"work"});
+  expect((await db.settings.get("settings"))?.theme).toBe("forest");
+  const invalid=structuredClone(backup);
+  invalid.workouts.find(w=>w.id==="new")!.exercises[0].sets[0].rir=11;
+  await expect(restore(invalid)).rejects.toThrow();
+  expect(await db.workouts.get("new")).toBeDefined();
+});

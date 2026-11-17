@@ -68,3 +68,23 @@ Die Screenshot-Erkennung einschließlich lokaler OCR und KI-Schaltfläche wurde 
 Noch offen: echte Browser-/iPhone- und Offline-Abnahme, RTL-Interaktionstests, explizite PWA-Update-Oberfläche, durchschnittliche Trainingsdauer in Statistik und weitergehende Modularisierung. Die erste Datenbankversion hat noch keine spätere Migration zu testen.
 
 Diese Ausgabe ist ein funktionsfähiger Grundstand, keine vollständige Erfüllung der umfangreichen SET-Abnahmekriterien.
+
+## SET 2.0 Erweiterungen
+
+- Satztypen: Arbeitssatz oder W (Aufwärmsatz). Alte Sätze bleiben Arbeitssätze. Volumen, Satzzähler und Rekorde berücksichtigen ausschließlich abgeschlossene Arbeitssätze.
+- RPE/RIR: Unter „Belastung · optional“, einklappbar und löschbar. RPE 1–10 in halben Schritten, RIR 0–10 ganzzahlig. Historische Werte bleiben erhalten; beim Vorlagenstart werden sie zurückgesetzt.
+- Live-Übersicht: Dauer, Arbeitssätze, Volumen und Fortschritt während des aktiven Workouts.
+- Focus Mode: Nächster offener Satz, große Eingaben, Abschlussbutton und vorhandener Timer. Derselbe Editor bleibt montiert; Umschalten löscht keine Eingaben. Workout in der normalen Ansicht abschließen.
+- Übung ersetzen: Gleiche Muskelgruppe, priorisiert nach Bewegungsmuster und Equipment. Bewegungsmuster sind in der Bibliothek editierbar. Abgeschlossene Sätze bleiben bei der ursprünglichen Übung; offene Sätze werden zu leeren Sätzen der Ersatzübung ohne übertragene Gewichte, Wiederholungen oder Belastungswerte.
+- Muscle Map: Unter Statistik, Vorder-/Rückseite, 7-/30-Tage-Filter. Primäre Muskelgruppen anhand gespeicherter Zuordnungen; keine geschätzte sekundäre Belastung. Fehlende Zuordnungen erscheinen als „Nicht zugeordnet“. Textbuttons ergänzen die SVG-Bedienung.
+- Theme Studio: Unter Einstellungen, Swiss Light, Midnight, Stone, Forest oder Systemdesign. Zentrale CSS-Tokens, Auswahl in IndexedDB und Backups.
+
+### Datenkompatibilität
+
+IndexedDB-Version 2 ergänzt vorhandene Workout-Übungen um Muskel-/Equipment-Momentaufnahmen aus der Bibliothek. IDs, Sätze, Notizen, Workouts und Timer bleiben erhalten. Die neuen optionalen Satzfelder benötigen keine destruktive Migration. Alte Backups (Schema 1) bleiben importierbar. Gelöschte Übungen ohne gespeicherte Zuordnung werden nicht geraten.
+
+Die gemeinsamen Filter isWork und isCompletedWork in src/data.ts schließen Aufwärmsätze aus Arbeitsberechnungen aus. Eine eigenständige Smart-Progression-Funktion existiert im Ausgangsprojekt nicht; zukünftige Vorschläge müssen diese Filter ebenfalls verwenden.
+
+### Prüfung der Erweiterungen
+
+npm test prüft bestehende Funktionen, Satztypen, Belastungsgrenzen, Live-Berechnungen, Übungswechsel, Muskelzeitfenster, eine echte Version-1-Datenbankmigration und Backup-Rundläufe. Focus-Wechsel, Persistenz, Übungswechsel und alle vier Themes wurden zusätzlich in Chromium bei 390 × 844 Pixeln geprüft. Ein Test auf einem physischen iPhone/Safari steht noch aus.
