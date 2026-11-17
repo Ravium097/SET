@@ -67,15 +67,22 @@ import { movements, movementOf } from "./features/swap";
 import { LiveSummary } from "./features/LiveSummary";
 import { EffortFields } from "./features/EffortFields";
 import "./style.css";
+import { t, germanError } from "./i18n/de";
+import { applyTheme, readTheme } from "./services/theme";
+import { RestDuration } from "./components/settings/RestDuration";
+import { Onboarding } from "./components/onboarding/Onboarding";
+import { setFocus } from "./services/setFocus";
+applyTheme(readTheme());
+import { ExpandLibrary } from "./components/exercises/ExpandLibrary";
+import { matchesExercise } from "./services/exerciseCatalog";
+import { previousPerformance } from "./services/previousPerformance";
+import { PreviousSet } from "./components/workout/PreviousSet";
+import { PersonalTemplates } from "./components/templates/PersonalTemplates";
+import { UpdateControl } from "./components/pwa/UpdateControl";
 const day = (d = new Date()) => format(d, "yyyy-MM-dd");
 const fmt = (n: number) =>
   n.toLocaleString("de-DE", { maximumFractionDigits: 1 });
-const error = (e: unknown) =>
-  alert(
-    e instanceof Error
-      ? e.message
-      : "Speichern fehlgeschlagen. Bitte Backup erstellen.",
-  );
+const error = (e: unknown) => alert(germanError(e));
 function App() {
   const { pathname } = useLocation();
   useEffect(() => { document.querySelector("main")?.scrollTo(0, 0); }, [pathname]);
@@ -89,7 +96,7 @@ function App() {
   const remaining =
     settings.paused ??
     (settings.timerEnd
-      ? Math.max(0, Math.ceil((settings.timerEnd - now) / 1000))
+      ? Math.max(0, Math.ceil((settings.timerEnd - Date.now()) / 1000))
       : null);
   return (
     <>
@@ -102,6 +109,7 @@ function App() {
             <Gear />
           </Link>
         </header>
+        <div className={pathname === "/settings" ? "update-panel" : "update-panel compact-update"}><UpdateControl compact={pathname !== "/settings"} /></div>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/training" element={<Training />} />
@@ -146,6 +154,7 @@ function App() {
             +30 s
           </button>
           <button
+            aria-label="Pause beenden"
             onClick={() =>
               db.settings.update("settings", { paused: null, timerEnd: null })
             }
@@ -154,9 +163,9 @@ function App() {
           </button>
         </aside>
       )}
-      <nav>
+      <nav aria-label="Hauptnavigation">
         {[
-          [Home, "/", "Home"],
+          [Home, "/", "Start"],
           [Dumbbell, "/training", "Training"],
           [CalendarDays, "/history", "Verlauf"],
           [ChartNoAxesCombined, "/stats", "Statistik"],
@@ -199,6 +208,7 @@ function Dashboard() {
   return <div className="dashboard">
     <p className="eyebrow">{format(today, "EEEE, d. MMMM", {locale: de})}</p>
     <h1>Dein Training.<br/><span>Alles im Blick.</span></h1>
+    {!all.length && <Onboarding/>}
     <article className="dashboard-start">
       <small>{active ? "DEIN AKTIVES WORKOUT" : "BEREIT FÜR DEINEN NÄCHSTEN SATZ?"}</small>
       <h2>{active ? active.name : "Heute ist dein Trainingstag."}</h2>
@@ -238,7 +248,7 @@ function Dashboard() {
 }
 function WorkoutCard({ w }: { w: Workout }) {
   return (
-    <Link to={`/workout/${w.id}`}>
+    <Link to={`/workout/${w.id}`} aria-label={`${w.name} · ${w.date}`}>
       <article>
         <small>{w.date}</small>
         <h3>{w.name}</h3>
@@ -261,7 +271,7 @@ function Training() {
     }
     const w: Workout = {
       id: id(),
-      name: template?.name ?? "Freies Workout",
+      name: template?.name ?? "Freies Training",
       date: day(),
       started: Date.now(),
       duration: null,
@@ -283,12 +293,14 @@ function Training() {
       <h1>Training</h1>
       <button className="primary action" onClick={() => start().catch(error)}>
         <Plus />
-        Freies Workout starten
+        Freies Training starten
       </button>
       <Link className="tile" to="/library">
         Übungsbibliothek <Dumbbell />
       </Link>
+      {!ws.length && <Onboarding allowDismiss={false} />}
       <h2>Deine Vorlagen</h2>
+      <PersonalTemplates />
       {ws
         .filter((w) => w.status === "template")
         .map((w) => (
@@ -422,6 +434,15 @@ function WorkoutFields({
   const [query, setQuery] = useState("");
   const current = w.exercises.flatMap(e => e.sets.map(s => ({item:e.id, set:s}))).find(x => !x.set.completed);
   useEffect(() => { if (focus) document.querySelectorAll<HTMLDetailsElement>(".workout-fields > details").forEach(d => {d.open = true;}); }, [focus]);
+  const history = useLiveQuery<Workout[]>(() => w.status === "active" ? db.workouts.where("status").equals("completed").toArray() : Promise.resolve([]), [w.status]) ?? [];
+  const rowFocus = setFocus(w);
+  const nextExercise = w.exercises.find(e => e.sets.some(s => s.id === rowFocus.next));
+  useEffect(() => {
+    if (!rowFocus.current) return;
+    const row = document.querySelector('.set[aria-current="step"]');
+    row?.closest('details')?.setAttribute('open', '');
+    row?.scrollIntoView({ block: 'center', behavior: 'auto' });
+  }, [rowFocus.current]);
   const modify = (idx: number, e: Item) =>
     save({ ...w, exercises: w.exercises.map((x, i) => (i === idx ? e : x)) });
   return (
@@ -442,8 +463,10 @@ function WorkoutFields({
           onChange={(e) => save({ ...w, date: e.target.value })}
         />
       </label>
-      {w.exercises.map((e, i) => (
-        <details key={e.id} open data-current={current?.item === e.id}>
+      {w.exercises.map((e, i) => {
+        const previous = w.status === "active" ? previousPerformance(w, i, history) : null;
+        return (
+        <details key={e.id} data-current={current?.item === e.id} open={focus || w.status !== "active" || e.sets.some(set => set.id === rowFocus.current)}>
           <WorkoutExerciseHeading
             item={e}
             exercise={ex.find((entry) => entry.id === e.exerciseId)}
@@ -454,6 +477,7 @@ function WorkoutFields({
             onChange={(ev) => modify(i, { ...e, name: ev.target.value })}
           />
           <ExerciseSwap w={w} item={e} library={ex} save={save}/>
+          {w.status === "active" && !previous && <small>Noch keine vorherigen Satzwerte für diese Übung.</small>}
           <div className="setheading">
             <span>Satz</span>
             <span>Gewicht · kg</span>
@@ -469,7 +493,10 @@ function WorkoutFields({
                 ),
               });
             return (
-              <React.Fragment key={s.id}><div data-current={current?.set.id === s.id} className={`set ${s.completed ? "done" : ""}`}>
+              <React.Fragment key={s.id}>
+              {rowFocus.current === s.id && <p className="set-state">{t('currentSet')} · {j + 1}</p>}
+              {rowFocus.next === s.id && <p className="set-state next">{t('nextSet')} · {j + 1}</p>}
+              <div data-current={current?.set.id === s.id} aria-current={rowFocus.current === s.id ? "step" : undefined} className={`set ${s.completed ? "done" : ""} ${rowFocus.current === s.id ? "current" : ""} ${rowFocus.next === s.id ? "next" : ""}`}>
                 <button
                   aria-label="Satz löschen"
                   disabled={focus}
@@ -531,6 +558,8 @@ function WorkoutFields({
               </div>
               <label className="set-options">Satztyp<select aria-label={`Satztyp Satz ${j + 1}`} value={s.type ?? "work"} onChange={ev => update({type: ev.target.value as "work" | "warmup"})}><option value="work">Arbeitssatz</option><option value="warmup">W · Aufwärmsatz</option></select></label>
               <EffortFields set={s} update={update}/>
+              {rowFocus.current === s.id && nextExercise && <small className="next-preview">Als Nächstes: {nextExercise.name} · Satz {nextExercise.sets.findIndex(s => s.id === rowFocus.next) + 1}</small>}
+              {previous && <PreviousSet previous={s.type === "warmup" ? undefined : previous.sets[e.sets.slice(0,j).filter(x => x.type !== "warmup").length]} date={previous.date} completed={s.completed} onApply={update} />}
               </React.Fragment>
             );
           })}
@@ -560,7 +589,7 @@ function WorkoutFields({
             Übung entfernen
           </button>
         </details>
-      ))}
+      );})}
       <article>
         <label>
           Übung hinzufügen
@@ -592,7 +621,8 @@ function WorkoutFields({
         >
           <option value="">Übung auswählen</option>
           {ex
-            .filter((e) => e.name.toLowerCase().includes(query.toLowerCase()))
+            .filter((e) => matchesExercise(e, query))
+            .sort((a,b) => a.name.localeCompare(b.name, "de"))
             .map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
@@ -616,7 +646,7 @@ function Editor() {
     db.workouts
       .put(next)
       .then(() => setMsg("Gespeichert"))
-      .catch((e) => setMsg(String(e)));
+      .catch((e) => setMsg(germanError(e)));
   };
   return (
     <div className={focus ? "editor focus-workout" : "editor"}>
@@ -626,7 +656,7 @@ function Editor() {
           ? "Vorlage"
           : w.status === "active"
             ? "Im Training"
-            : "Workout"}
+            : "Training"}
       </h1>
       <p>
         {count(w)} abgeschlossene Sätze · {fmt(volume(w))} kg ·{" "}
@@ -646,7 +676,7 @@ function Editor() {
               return error(Error("Name und Datum fehlen"));
             if (
               confirm(
-                `Workout abschließen? ${w.exercises.length} Übungen, ${count(w)} Sätze, ${fmt(volume(w))} kg.`,
+                `Training abschließen? ${w.exercises.length} Übungen, ${count(w)} Sätze, ${fmt(volume(w))} kg.`,
               )
             ) {
               await db.transaction("rw", db.workouts, db.settings, async () => {
@@ -666,18 +696,18 @@ function Editor() {
             }
           }}
         >
-          Workout abschließen
+          Training abschließen
         </button>
       )}
       <button
         onClick={async () => {
-          if (confirm("Dieses Workout endgültig löschen?")) {
+          if (confirm("Dieses Training endgültig löschen?")) {
             await db.workouts.delete(w.id);
             nav("/training");
           }
         }}
       >
-        Workout löschen
+        Training löschen
       </button>
     </div>
   );
@@ -692,19 +722,20 @@ function Library() {
   return (
     <>
       <h1>Übungen</h1>
+      <ExpandLibrary />
       <input
         placeholder="Übung suchen"
         value={q}
         onChange={(e) => Q(e.target.value)}
       />
       <div className="two">
-        <select value={m} onChange={(e) => M(e.target.value)}>
+        <select aria-label="Muskelgruppe filtern" value={m} onChange={(e) => M(e.target.value)}>
           <option value="">Alle Muskelgruppen</option>
           {muscles.map((x) => (
             <option key={x}>{x}</option>
           ))}
         </select>
-        <select value={eq} onChange={(e) => E(e.target.value)}>
+        <select aria-label="Gerät filtern" value={eq} onChange={(e) => E(e.target.value)}>
           <option value="">Alle Geräte</option>
           {equipment.map((x) => (
             <option key={x}>{x}</option>
@@ -792,11 +823,12 @@ function Library() {
       {es
         .filter(
           (e) =>
-            e.name.toLowerCase().includes(q.toLowerCase()) &&
+            matchesExercise(e, q) &&
             (!m || e.muscle === m) &&
             (!eq || e.equipment === eq) &&
             (!fav || e.favorite),
         )
+        .sort((a,b) => a.name.localeCompare(b.name, "de"))
         .map((e) => (
           <article key={e.id}>
             <h3>{e.name}</h3>
@@ -816,7 +848,7 @@ function Library() {
                 onClick={() => {
                   if (
                     confirm(
-                      "Übung löschen? Historische Workouts bleiben erhalten.",
+                      "Übung löschen? Historische Trainings bleiben erhalten.",
                     )
                   )
                     db.exercises.delete(e.id);
@@ -877,7 +909,7 @@ function History() {
           <WorkoutCard key={w.id} w={w} />
         ))}
       {!ws.some((w) => w.date === selected) && (
-        <p>Für diesen Tag ist kein Workout gespeichert.</p>
+        <p>Für diesen Tag ist kein Training gespeichert.</p>
       )}
     </>
   );
@@ -943,7 +975,7 @@ function Stats() {
       <div className="metrics">
         <article>
           <b>{filtered.length}</b>
-          <small>Workouts</small>
+          <small>Trainings</small>
         </article>
         <article>
           <b>{fmt(filtered.reduce((s, w) => s + volume(w), 0))}</b>
@@ -964,12 +996,12 @@ function Stats() {
               <BarChart data={[...groups.values()]}>
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis width={45} />
-                <Tooltip />
-                <Bar dataKey={key} fill="var(--ink)" radius={[4, 4, 0, 0]} />
+                <Tooltip contentStyle={{background:"var(--surface)",borderColor:"var(--line)",color:"var(--ink)"}} />
+                <Bar name={key === "volume" ? "Trainingsvolumen (kg)" : "Trainings"} dataKey={key} fill="var(--ink)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p>Deine Diagramme entstehen mit deinem ersten Workout.</p>
+            <p>Deine Diagramme entstehen mit deinem ersten Training.</p>
           )}
         </article>
       ))}
@@ -985,8 +1017,8 @@ function Stats() {
             <LineChart data={strength}>
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis />
-              <Tooltip />
-              <Line dataKey="weight" stroke="var(--ink)" />
+              <Tooltip contentStyle={{background:"var(--surface)",borderColor:"var(--line)",color:"var(--ink)"}} />
+              <Line name="Gewicht (kg)" dataKey="weight" stroke="var(--ink)" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -1008,27 +1040,18 @@ function Stats() {
   );
 }
 function Settings() {
-  const s = useLiveQuery(() => db.settings.get("settings")) ?? defaults;
+  const s = useLiveQuery(() => db.settings.get("settings"));
+  if (!s) return <p>Einstellungen werden geladen …</p>;
   return (
     <>
       <h1>Einstellungen</h1>
       <ThemeStudio settings={s}/>
       <article>
         <h2>Pausentimer</h2>
-        <label>
-          Standardpause · Sekunden
-          <input
-            type="number"
-            min="1"
-            max="3600"
-            value={s.rest}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (n >= 1 && n <= 3600)
-                db.settings.update("settings", { rest: n });
-            }}
-          />
-        </label>
+        <RestDuration value={s.rest} onSave={async seconds => {
+          const updated = await db.settings.update("settings", { rest: seconds });
+          if (!updated) throw new Error("Settings missing");
+        }} />
         <label>
           <input
             type="checkbox"
@@ -1077,7 +1100,7 @@ function Settings() {
                 const b = backupSchema.parse(JSON.parse(await f.text()));
                 if (
                   confirm(
-                    `${b.workouts.length} Workouts und ${b.exercises.length} Übungen wiederherstellen? Alle vorhandenen Daten werden ersetzt.`,
+                    `${b.workouts.length} Trainings und ${b.exercises.length} Übungen wiederherstellen? Alle vorhandenen Daten werden ersetzt.`,
                   )
                 ) {
                   await restore(b);
@@ -1121,7 +1144,7 @@ function Settings() {
         </button>
       </article>
       <p>
-        SET · Version 1.0.0
+        SET · Ansicht
         <br />
         Auf dem iPhone: Safari → Teilen → Zum Home-Bildschirm.
       </p>
