@@ -485,3 +485,59 @@ button, input, select, textarea { color:var(--ink); }
 select:focus-visible, summary:focus-visible { outline:2px solid var(--muted); outline-offset:2px; }
 .focus-workout .set input[type="checkbox"] { display:none; }
 .focus-workout .set > .focus-complete { background:var(--ink); color:var(--on-ink); font-size:20px; padding:16px; border-radius:12px; }
+
+/* Liquid Glass: opt-in material treatment; layout and typography stay shared.
+   Solid surfaces are the baseline for browsers without backdrop-filter. */
+:root[data-theme="glass"] {
+  --bg:#eaf0f8; --surface:#f7faff; --surface-alt:#e3eaf4;
+  --ink:#172638; --muted:#4c5d72; --border:#b3c1d3;
+  --on-ink:#fff; --timer-button:#34475e;
+  --glass-fill:linear-gradient(145deg, #ffffffd9, #f4f8ffb8);
+  --glass-edge:#ffffffeb;
+  --glass-shadow:inset 0 1px 0 #fff, inset 0 -1px 0 #ffffff70, 0 8px 28px #344b7010;
+}
+:root[data-theme="glass"] #root {
+  background:
+    radial-gradient(ellipse at 0% 15%, #c4d8f0 0, transparent 55%),
+    radial-gradient(ellipse at 100% 65%, #d8d1eb 0, transparent 50%),
+    linear-gradient(160deg, #f5f8fc, var(--bg));
+}
+:root[data-theme="glass"] :is(article, details, .tile, nav) {
+  border-color:var(--glass-edge);
+  box-shadow:var(--glass-shadow);
+}
+:root[data-theme="glass"] :is(.effort, .exercise-swap, details details) {
+  box-shadow:none;
+}
+:root[data-theme="glass"] .app-dock { background:transparent; }
+:root[data-theme="glass"] nav a { border-radius:28px; color:var(--muted); }
+:root[data-theme="glass"] nav a.active {
+  color:var(--ink); background:#dce6f2; box-shadow:inset 0 1px 0 #fff9, 0 2px 8px #30456612;
+}
+:root[data-theme="glass"] :is(button, .button) { box-shadow:inset 0 1px 0 #ffffff80; }
+:root[data-theme="glass"] :is(.primary, .focus-complete) {
+  background:linear-gradient(145deg,#344a65,#172638); color:var(--on-ink);
+}
+:root[data-theme="glass"] .timer {
+  background:linear-gradient(145deg,#344a65,#172638);
+  border:1px solid #ffffff55; box-shadow:inset 0 1px 0 #ffffff40,0 4px 20px #25384d20;
+}
+:root[data-theme="glass"] .timer button { background:#ffffff18; }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  :root[data-theme="glass"] :is(article, .workout-fields > details, .dashboard > section > details, nav, .tile) {
+    background:var(--glass-fill);
+    -webkit-backdrop-filter:blur(18px) saturate(130%);
+    backdrop-filter:blur(18px) saturate(130%);
+  }
+  :root[data-theme="glass"] nav { background:linear-gradient(145deg,#ffffffc9,#f1f6ffb0); }
+}
+@media (prefers-reduced-transparency:reduce), (prefers-contrast:more) {
+  :root[data-theme="glass"] #root :is(article, details, .tile, nav, .timer) {
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    background:var(--surface); border-color:var(--border); box-shadow:none;
+  }
+  :root[data-theme="glass"] #root .timer { background:var(--ink); }
+  :root[data-theme="glass"] #root { background:var(--bg); }
+}
+
+:root[data-theme="glass"] .action { border-radius:18px; }

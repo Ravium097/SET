@@ -44,7 +44,7 @@ export const settingsSchema = z.object({
   id: z.literal("settings"),
   rest: z.number().int().min(1).max(3600),
   auto: z.boolean(),
-  theme: z.enum(["swiss", "midnight", "stone", "forest", "system"]).optional(),
+  theme: z.enum(["swiss", "midnight", "stone", "forest", "glass", "system"]).optional(),
   timerEnd: z.number().nullable(),
   paused: z.number().nullable(),
 });

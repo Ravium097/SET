@@ -88,3 +88,5 @@ Die gemeinsamen Filter isWork und isCompletedWork in src/data.ts schließen Aufw
 ### Prüfung der Erweiterungen
 
 npm test prüft bestehende Funktionen, Satztypen, Belastungsgrenzen, Live-Berechnungen, Übungswechsel, Muskelzeitfenster, eine echte Version-1-Datenbankmigration und Backup-Rundläufe. Focus-Wechsel, Persistenz, Übungswechsel und alle vier Themes wurden zusätzlich in Chromium bei 390 × 844 Pixeln geprüft. Ein Test auf einem physischen iPhone/Safari steht noch aus.
+
+Liquid Glass ist zusätzlich im Theme Studio auswählbar: helle, transluzente Flächen, dezente Lichtkanten und eine gläserne Navigation. Die Umsetzung ist vom Liquid-Glass-Stil inspiriert, keine native iOS-Systemoberfläche. Bestehende Themes und Auswahl bleiben erhalten. Ohne Backdrop-Filter sowie bei reduzierter Transparenz/erhöhtem Kontrast werden deckende Flächen verwendet. Es gibt keine dauerhaften Animationen oder zusätzlichen Abhängigkeiten.
