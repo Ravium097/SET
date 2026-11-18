@@ -14,7 +14,7 @@ export function MuscleMap() {
   const max = Math.max(1,...totals.values());
   return <article className="muscle-map"><h2>Muscle Map</h2><p>Abgeschlossene Arbeitssätze nach primärer Muskelgruppe. Stärker hervorgehobene Flächen bedeuten mehr Sätze.</p>
     <div className="two"><label>Zeitraum<select value={days} onChange={e=>setDays(Number(e.target.value))}><option value={7}>7 Tage</option><option value={30}>30 Tage</option></select></label><label>Körperansicht<select value={side} onChange={e=>setSide(e.target.value)}><option value="front">Vorderseite</option><option value="back">Rückseite</option></select></label></div>
-    <svg viewBox="0 0 240 455" aria-label={side === "front" ? "Muskelgruppen Vorderseite" : "Muskelgruppen Rückseite"} className="body-map">
+    <svg viewBox="0 0 240 430" aria-label={side === "front" ? "Muskelgruppen Vorderseite" : "Muskelgruppen Rückseite"} className="body-map">
       <g fill="var(--surface-alt)" stroke="var(--border)" strokeWidth="1.2"><path d={head}/><path d={bodyOutline}/></g>
       {[false,true].map(mirror => <g key={String(mirror)} transform={mirror ? "translate(240 0) scale(-1 1)" : undefined}>
         {neutralDetails.map((d,i)=><path key={i} d={d} fill="var(--muted)" opacity=".18" stroke="var(--surface)" strokeWidth="1"/>)}
