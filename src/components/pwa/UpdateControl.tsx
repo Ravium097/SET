@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export const RELEASE = "SET 2.0 · Starthilfe 01";
+export const RELEASE = "SET 2.0 · Anatomie 02";
 let registrationPromise: Promise<ServiceWorkerRegistration> | undefined;
 function registration() {
   return (registrationPromise ??= navigator.serviceWorker
