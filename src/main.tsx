@@ -75,6 +75,7 @@ import { setFocus } from "./services/setFocus";
 
 import { ExpandLibrary } from "./components/exercises/ExpandLibrary";
 import { matchesExercise } from "./services/exerciseCatalog";
+import { startWorkout, carryForward, appendSet } from "./services/carryForward";
 import { previousPerformance } from "./services/previousPerformance";
 import { PreviousSet } from "./components/workout/PreviousSet";
 import { PersonalTemplates } from "./components/templates/PersonalTemplates";
@@ -264,27 +265,7 @@ function Training() {
   const ws = useLiveQuery(() => db.workouts.toArray()) ?? [];
   const navigate = useNavigate();
   async function start(template?: Workout) {
-    const active = ws.find((w) => w.status === "active");
-    if (active) {
-      navigate(`/workout/${active.id}`);
-      return;
-    }
-    const w: Workout = {
-      id: id(),
-      name: template?.name ?? "Freies Training",
-      date: day(),
-      started: Date.now(),
-      duration: null,
-      status: "active",
-      exercises: template
-        ? structuredClone(template.exercises).map((e) => ({
-            ...e,
-            id: id(),
-            sets: e.sets.map((s) => ({ ...s, id: id(), completed: false, rpe: null, rir: null })),
-          }))
-        : [],
-    };
-    await db.workouts.add(w);
+    const w = await startWorkout(template);
     navigate(`/workout/${w.id}`);
   }
   return (
@@ -300,6 +281,7 @@ function Training() {
       </Link>
       {!ws.length && <Onboarding allowDismiss={false} />}
       <h2>Deine Vorlagen</h2>
+      <p>Gewichte und Wiederholungen werden beim Start pro Arbeitssatz aus dem letzten Training derselben Übung übernommen. Ohne passende Werte gelten die Vorlagenwerte.</p>
       <PersonalTemplates />
       {ws
         .filter((w) => w.status === "template")
@@ -437,7 +419,8 @@ function WorkoutFields({
   const [query, setQuery] = useState("");
   const current = w.exercises.flatMap(e => e.sets.map(s => ({item:e.id, set:s}))).find(x => !x.set.completed);
   useEffect(() => { if (focus) document.querySelectorAll<HTMLDetailsElement>(".workout-fields > details").forEach(d => {d.open = true;}); }, [focus]);
-  const history = useLiveQuery<Workout[]>(() => w.status === "active" ? db.workouts.where("status").equals("completed").toArray() : Promise.resolve([]), [w.status]) ?? [];
+  const savedHistory = useLiveQuery<Workout[]>(() => w.status === "active" ? db.workouts.where("status").equals("completed").toArray() : Promise.resolve([]), [w.status]);
+  const history = savedHistory ?? [];
   const rowFocus = setFocus(w);
   const nextExercise = w.exercises.find(e => e.sets.some(s => s.id === rowFocus.next));
   useEffect(() => {
@@ -567,7 +550,8 @@ function WorkoutFields({
             );
           })}
           <button
-            onClick={() => modify(i, { ...e, sets: [...e.sets, emptySet()] })}
+            disabled={w.status === "active" && !savedHistory}
+            onClick={() => save(appendSet(w,i,history))}
           >
             ＋ Satz
           </button>
@@ -604,10 +588,11 @@ function WorkoutFields({
         </label>
         <select
           aria-label="Übung auswählen"
+          disabled={w.status === "active" && !savedHistory}
           value=""
           onChange={(ev) => {
             const e = ex.find((x) => x.id === ev.target.value)!;
-            save({
+            const next: Workout = {
               ...w,
               exercises: [
                 ...w.exercises,
@@ -619,7 +604,8 @@ function WorkoutFields({
                   sets: [emptySet()],
                 },
               ],
-            });
+            };
+            save(carryForward(next,history,new Set(next.exercises[next.exercises.length-1].sets.map(s => s.id))));
           }}
         >
           <option value="">Übung auswählen</option>
