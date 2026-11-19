@@ -69,11 +69,10 @@ import { LiveSummary } from "./features/LiveSummary";
 import { EffortFields } from "./features/EffortFields";
 import "./style.css";
 import { t, germanError } from "./i18n/de";
-import { applyTheme, readTheme } from "./services/theme";
 import { RestDuration } from "./components/settings/RestDuration";
 import { Onboarding } from "./components/onboarding/Onboarding";
 import { setFocus } from "./services/setFocus";
-applyTheme(readTheme());
+
 import { ExpandLibrary } from "./components/exercises/ExpandLibrary";
 import { matchesExercise } from "./services/exerciseCatalog";
 import { previousPerformance } from "./services/previousPerformance";

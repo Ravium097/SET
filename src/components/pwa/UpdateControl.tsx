@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export const RELEASE = "SET 2.0 · Statusleiste 04";
+export const RELEASE = "SET 2.0 · Theme-Statusleiste 05";
 let registrationPromise: Promise<ServiceWorkerRegistration> | undefined;
 function registration() {
   return (registrationPromise ??= navigator.serviceWorker

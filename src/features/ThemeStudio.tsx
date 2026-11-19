@@ -8,6 +8,9 @@ export function useTheme(theme:Settings["theme"]) {
     const apply = () => {
       const selected = theme === "system" ? media.matches ? "midnight" : "swiss" : theme ?? (readTheme() === "dark" ? "midnight" : "swiss");
       document.documentElement.dataset.theme = selected;
+      document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.setAttribute("content", selected === "midnight" ? "black" : "default");
+      try { localStorage.setItem("set-theme-startup", theme ?? selected); } catch { /* IndexedDB remains authoritative. */ }
+      document.documentElement.style.backgroundColor = {swiss:"#f7f7f7",midnight:"#121416",stone:"#f3f0e9",forest:"#eef3ed",glass:"#eaf0f8"}[selected];
       document.documentElement.style.colorScheme = selected === "midnight" ? "dark" : "light";
       document.querySelector('meta[name="theme-color"]')?.setAttribute("content", {swiss:"#f7f7f7",midnight:"#121416",stone:"#f3f0e9",forest:"#eef3ed",glass:"#eaf0f8"}[selected]);
     };

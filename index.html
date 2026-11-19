@@ -6,21 +6,36 @@
       name="viewport"
       content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
     />
-    <style>html,body{margin:0;background:#111111;}html{color-scheme:dark;}</style>
+    <style>html,body{margin:0;background:var(--bg,#111111);}html{color-scheme:dark;}</style>
     <meta name="theme-color" content="#111111" />
-    <script>try{document.documentElement.dataset.theme=localStorage.getItem('set-theme')==='light'?'light':'dark';}catch{document.documentElement.dataset.theme='dark';}document.querySelector('meta[name="theme-color"]').content=document.documentElement.dataset.theme==='light'?'#F7F7F7':'#111111';</script>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <script>
+      (function () {
+        var colors = {swiss:"#f7f7f7",midnight:"#121416",stone:"#f3f0e9",forest:"#eef3ed",glass:"#eaf0f8"};
+        var theme = "midnight";
+        try {
+          theme = localStorage.getItem("set-theme-startup") || (localStorage.getItem("set-theme") === "light" ? "swiss" : "midnight");
+          if (theme === "system") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "midnight" : "swiss";
+        } catch (_) {}
+        if (!Object.prototype.hasOwnProperty.call(colors, theme)) theme = "midnight";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme === "midnight" ? "dark" : "light";
+        document.documentElement.style.backgroundColor = colors[theme];
+        document.querySelector('meta[name="theme-color"]').content = colors[theme];
+        document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content = theme === "midnight" ? "black" : "default";
+      })();
+    </script>
     <script>for(const type of ["gesturestart","gesturechange"])document.addEventListener(type,event=>event.preventDefault(),{passive:false});</script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="icon" href="/icons/favicon.png" />
 <title>SET · Training dokumentieren</title>
   </head>
   <body>
-    <div id="root"><main style="font:16px -apple-system,sans-serif;color:#f5f5f5;background:#111111;padding:32px;min-height:100vh">
+    <div id="root"><main style="font:16px -apple-system,sans-serif;color:var(--ink,#f5f5f5);background:var(--bg,#111111);padding:32px;min-height:100vh">
       <h1>SET</h1><p id="startup-status" role="status">Deine Trainings werden geladen …</p>
       <p>Bleibt diese Meldung stehen? Schließe andere SET-Fenster und öffne die Starthilfe. Deine Trainings werden nicht gelöscht.</p>
-      <a href="/recovery.html" style="color:#f5f5f5;text-decoration:underline">Starthilfe öffnen</a>
+      <a href="/recovery.html" style="color:inherit;text-decoration:underline">Starthilfe öffnen</a>
       <noscript>Bitte aktiviere JavaScript für SET.</noscript>
     </main></div>
     <script type="module" src="/src/main.tsx"></script>

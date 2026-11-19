@@ -602,7 +602,7 @@ select:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); out
 /* Paint the installed iOS status area; keep its inset outside scrolling content. */
 html, body { background-color:var(--bg); }
 #root { --safe-top:env(safe-area-inset-top, 0px); padding-top:var(--safe-top); background-color:var(--bg); }
-#root::before { content:""; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:#121416; pointer-events:none; }
+#root::before { content:""; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:var(--bg); pointer-events:none; }
 #root > main { padding-top:12px; }
 .body-map { height:450px; width:100%; }
 .muscle-region { cursor:pointer; outline:none; }
