@@ -627,3 +627,15 @@ html, body { background-color:var(--bg); }
 .diary-settings-link { display:inline-block; margin-bottom:20px; color:var(--muted); }
 .meal-reminder { padding:20px; border:1px solid var(--ink); border-radius:16px; margin-bottom:24px; background:var(--surface); }
 .meal-reminder a { text-decoration:underline; margin-right:16px; }
+/* Safari's native date/time controls must use the same content edges as other fields. */
+input[type="date"], input[type="time"], input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+input::-webkit-date-and-time-value { min-width: 0; text-align: left; }
+input::-webkit-datetime-edit { min-width: 0; padding: 0; }
