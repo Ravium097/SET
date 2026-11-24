@@ -1,3 +1,6 @@
+import "./nutrition.css";
+import { BottomSheet } from "../../components/ui/BottomSheet";
+import { FoodPicker, NutrientFields } from "./FoodPicker";
 import { ActionMenu } from "../../components/ui/ActionMenu";
 import {DateField} from "../../components/ui/DateField";
 import { nutritionDefaults } from "../../data";
@@ -7,12 +10,11 @@ import { Link, Navigate } from "react-router-dom";
 import {
   db,
   id,
-  nutritionSchema,
   type NutritionEntry,
   type Food,
   type Settings,
 } from "../../data";
-import { localDay, searchFoods } from "./service";
+import { localDay, findFoods, isBarcode, foodToEntry, nutrientTotal, nutrients, saveDiaryEntry, saveFood, sourceLabel } from "./service";
 export function Modules({ settings }: { settings: Settings }) {
   return (
     <article>
@@ -102,7 +104,7 @@ export function DailyOverview({ date = localDay() }: { date?: string }) {
     </article>
   );
 }
-function Scanner({
+export function Scanner({
   onCode,
   onClose,
 }: {
@@ -152,12 +154,15 @@ export function Nutrition() {
   const preferences = settings?.nutritionPreferences ?? nutritionDefaults;
   const [date, setDate] = useState(localDay());
   const [view, setView] = useState("Tag");
-  const editor = useRef<HTMLElement>(null);
+  const [inputMode, setInputMode] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Food[]>([]);
+
   const [message, setMessage] = useState("");
   const [scan, setScan] = useState(false);
   const [busy, setBusy] = useState(false);
+  const scanRequest=useRef(0);
+  useEffect(()=>()=>{scanRequest.current++;},[]);
+  const closeEditor=()=>{scanRequest.current++;setDraft(null);setScan(false);setBusy(false);};
   const all = useLiveQuery(() => db.nutrition.toArray()) ?? [];
   const foods = useLiveQuery(() => db.foods.toArray()) ?? [];
   const fresh = (): NutritionEntry => ({
@@ -171,29 +176,31 @@ export function Nutrition() {
     notes: "",
   });
   const [draft, setDraft] = useState<NutritionEntry | null>(null);
-  useEffect(() => {
-    if (draft) {
-      editor.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-      editor.current?.focus({ preventScroll: true });
-    }
-  }, [draft?.id]);
-  const allowed = (e: NutritionEntry) =>
-    e.meal === "Getränke" ? settings?.hydration : settings?.nutrition;
-  async function search(q: string) {
-    setBusy(true);
-    setMessage("");
+  const allowed = (e: NutritionEntry) => e.meal === "Getränke" ? settings?.hydration : settings?.nutrition;
+  const choose = (food: Food, comparable=false) => {
+    setDraft(foodToEntry(food,draft??fresh(),comparable));setInputMode(true);setScan(false);
+  };
+  const manual = (q="") => {
+    const base=draft??fresh();
+    setDraft({...fresh(),date:base.date,meal:base.meal,name:isBarcode(q)?"":q,source:"manual",barcode:isBarcode(q)?q:undefined});
+    setInputMode(true);setScan(false);
+  };
+  async function scanned(code:string) {
+    const request=++scanRequest.current;
+    setScan(false);setBusy(true);setMessage("");
     try {
-      setResults(await searchFoods(q));
-    } catch (e) {
-      setMessage(String((e as Error).message));
-    } finally {
-      setBusy(false);
-    }
+      const result=await findFoods(code);
+      if(request!==scanRequest.current) return;
+      const found=result.foods.find(f=>f.id===code||f.barcode===code);
+      if(found) choose(found);
+      else {manual(code);setMessage(result.limited?"Die Datenbank pausiert kurz. Du kannst das Produkt mit dem Barcode manuell speichern.":result.offline?"Offline nicht gespeichert. Produkt manuell mit diesem Barcode anlegen.":"Barcode nicht gefunden. Produkt manuell anlegen; die Zuordnung bleibt lokal gespeichert.");}
+    }catch{setMessage("Barcode konnte nicht nachgeschlagen werden. Bitte erneut versuchen.");}
+    finally{if(request===scanRequest.current)setBusy(false);}
   }
   async function save() {
     try {
       if (!draft) return;
-      await db.nutrition.put(nutritionSchema.parse(draft));
+      await saveDiaryEntry(draft);
       setDraft(null);
       setMessage("Gespeichert.");
     } catch {
@@ -228,14 +235,6 @@ export function Nutrition() {
       (e) => allowed(e) && e.name.toLowerCase().includes(query.toLowerCase()),
     )
     .sort((a, b) => b.date.localeCompare(a.date));
-  const frequencies = new Map<string, number>();
-  for (const e of history)
-    frequencies.set(e.name, (frequencies.get(e.name) ?? 0) + 1);
-  const frequent = [...new Map(history.map((e) => [e.name, e])).values()]
-    .sort(
-      (a, b) => (frequencies.get(b.name) ?? 0) - (frequencies.get(a.name) ?? 0),
-    )
-    .slice(0, 8);
   return (
     <>
       <p className="eyebrow">BASE. / DAILY</p>
@@ -263,12 +262,13 @@ export function Nutrition() {
       </div>
       <p role="status">{message}</p>
       {draft && (
-        <article ref={editor} tabIndex={-1} className="diary-editor">
-          <h2>
-            {all.some((e) => e.id === draft.id)
-              ? "Eintrag bearbeiten"
-              : "Neuer Eintrag"}
-          </h2>
+        <BottomSheet title={all.some(e=>e.id===draft.id)?"Eintrag bearbeiten":"Lebensmittel hinzufügen"} onClose={()=>{closeEditor();setMessage("");}}>
+          <p role="status">{message}</p>
+          {busy && <p role="status">Barcode wird nachgeschlagen …</p>}
+          {scan ? <Scanner onClose={()=>setScan(false)} onCode={code=>{void scanned(code);}}/> : !inputMode ? <FoodPicker showNutrients={preferences.showNutrients} hydrationOnly={!settings.nutrition} onPick={choose} onManual={manual} onScan={()=>setScan(true)} onRecent={e=>{setDraft({...e,id:id(),date,time:new Date().toTimeString().slice(0,5)});setInputMode(true);}}/> : <div className="diary-editor">
+          <button onClick={()=>setInputMode(false)}>Lebensmittel auswählen</button>
+          <p className="food-hint">{sourceLabel(draft)}{draft.sourceName?` · ${draft.sourceName}`:""}{draft.source==="comparable"?" · Vergleichseintrag, Produktangaben bitte prüfen.":""}</p>
+          {draft.barcode && <p className="food-hint">Barcode: {draft.barcode} · Zuordnung wird lokal gespeichert.</p>}
           <label>
             Uhrzeit
             <input
@@ -307,7 +307,7 @@ export function Nutrition() {
             Name
             <input
               value={draft.name}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value, source:"manual" })}
             />
           </label>
           <label>
@@ -338,7 +338,10 @@ export function Nutrition() {
               ))}
             </select>
           </label>
-          {preferences.showNutrients && <details><summary>Nährwerte · optional</summary><p>Je 100 g/ml. Für Portionen erfolgt keine Umrechnung.</p>{([['kcal','Energie (kcal)'],['protein','Eiweiß (g)'],['carbs','Kohlenhydrate (g)'],['fat','Fett (g)']] as const).map(([key,label])=><label key={key}>{label}<input type="number" min="0" step="any" value={draft[key]??''} onChange={e=>setDraft({...draft,[key]:e.target.value===''?undefined:Number(e.target.value)})}/></label>)}</details>}
+          {preferences.showNutrients && <details><summary>Nährwerte · optional</summary>
+          <label>Nährwertbezug<select value={draft.nutrientBasis??"100"} onChange={e=>setDraft({...draft,nutrientBasis:e.target.value as "100"|"portion",source:"manual"})}><option value="100">Je 100 g/ml</option><option value="portion">Je Portion</option></select></label>
+          <p>Leere Felder bleiben unbekannt. Manuelle Korrekturen werden als solche gekennzeichnet.</p><NutrientFields value={draft} onChange={(key,value)=>setDraft({...draft,[key]:value,source:"manual"})}/></details>}
+
           <label>
             Notizen / Rezeptzutaten
             <textarea
@@ -367,38 +370,17 @@ export function Nutrition() {
           <button className="primary" onClick={save}>
             Speichern
           </button>
-          <button onClick={() => setDraft(null)}>Abbrechen</button>
-          {(["food", "recipe", "drink"] as const)
-            .filter((k) =>
-              draft.meal === "Getränke" ? k === "drink" : k !== "drink",
-            )
-            .map((kind) => (
-              <button
-                key={kind}
-                onClick={async () => {
-                  if (!draft.name.trim()) return;
-                  try {
-                    await db.foods.put({
-                      id: id(),
-                      name: draft.name,
-                      kind,
-                      notes: draft.notes, kcal:draft.kcal, protein:draft.protein, carbs:draft.carbs, fat:draft.fat,
-                    });
-                    setMessage("In deiner Sammlung gespeichert.");
-                  } catch {
-                    setMessage("Speichern fehlgeschlagen.");
-                  }
-                }}
-              >
-                {kind === "recipe"
-                  ? "Als Rezept speichern"
-                  : kind === "drink"
-                    ? "Getränk merken"
-                    : "Lebensmittel merken"}
-              </button>
-            ))}
-        </article>
+          <button onClick={closeEditor}>Abbrechen</button>
+          <button onClick={async()=>{
+            try {
+              const saved=await saveFood({id:foods.find(f=>f.id===draft.foodId)?.kind==="recipe"?id():draft.foodId??id(),name:draft.name.trim(),kind:draft.meal==="Getränke"?"drink":"food",notes:draft.notes,barcode:draft.barcode,source:draft.source==="comparable"?"comparable":"manual",sourceName:draft.sourceName,nutrientBasis:draft.nutrientBasis,...Object.fromEntries(nutrients.map(k=>[k,draft[k]]))});
+              setDraft({...draft,foodId:saved.id});setMessage("In deiner Sammlung gespeichert.");
+            }catch{setMessage("Bitte einen Namen und gültige Nährwerte angeben. Speichern fehlgeschlagen.");}
+          }}>Als eigenes Lebensmittel speichern</button>
+          </div>}
+        </BottomSheet>
       )}
+
       {view === "Tag" && (
         <section aria-label="Mahlzeiten">
           {[
@@ -417,7 +399,8 @@ export function Nutrition() {
                   <h2>{meal}</h2>
                   <button
                     aria-label={`${meal} hinzufügen`}
-                    onClick={() =>
+                    onClick={() => {
+                      setInputMode(false);setMessage("");
                       setDraft({
                         ...fresh(),
                         meal: meal as NutritionEntry["meal"],
@@ -425,8 +408,8 @@ export function Nutrition() {
                         amount:
                           meal === "Getränke" ? preferences.drinkAmount : 100,
                         name: meal === "Getränke" ? preferences.drinkName : "",
-                      })
-                    }
+                      });
+                    }}
                   >
                     +
                   </button>
@@ -434,7 +417,7 @@ export function Nutrition() {
                 {!daily.some((e) => e.meal === meal) && (
                   <p className="diary-empty">Noch kein Eintrag</p>
                 )}
-                {preferences.showNutrients && daily.some(e=>e.meal===meal) && <p className="meal-nutrients">{([['kcal','kcal'],['protein','g Eiweiß'],['carbs','g Kohlenhydrate'],['fat','g Fett']] as const).map(([key,label])=>{const rows=daily.filter(e=>e.meal===meal);const complete=rows.every(e=>e.unit!=="Portion"&&e[key]!==undefined);return `${complete ? Math.round(rows.reduce((sum,e)=>sum+(e[key]??0)*e.amount/100,0)) : '–'} ${label}`}).join(' · ')}<small>– = Angaben fehlen oder Portionsgröße unbekannt</small></p>}
+                {preferences.showNutrients && daily.some(e=>e.meal===meal) && <p className="meal-nutrients">{([['kcal','kcal'],['protein','g Eiweiß'],['carbs','g Kohlenhydrate'],['fat','g Fett']] as const).map(([key,label])=>{const rows=daily.filter(e=>e.meal===meal);const complete=rows.every(e=>nutrientTotal(e,key)!==undefined);return `${complete ? Math.round(rows.reduce((sum,e)=>sum+nutrientTotal(e,key)!,0)) : '–'} ${label}`}).join(' · ')}<small>– = Angaben fehlen oder Portionsgröße unbekannt</small></p>}
                 {meal === "Getränke" && preferences.showDrinkTotal && (
                   <p>
                     {daily
@@ -453,11 +436,11 @@ export function Nutrition() {
                       <p>
                         {e.amount} {e.unit === "Portion" && e.amount !== 1 ? "Portionen" : e.unit}
                         {preferences.showNutrients &&
-                        e.kcal !== undefined &&
-                        e.unit !== "Portion"
-                          ? ` · ${Math.round((e.kcal * e.amount) / 100)} kcal`
+                        nutrientTotal(e,"kcal") !== undefined
+                          ? ` · ${Math.round(nutrientTotal(e,"kcal")!)} kcal`
                           : ""}
                       </p>
+                      <small>{sourceLabel(e)}</small>
                       {e.notes && <p>{e.notes}</p>}
                       {e.photo && (
                         <img
@@ -466,7 +449,7 @@ export function Nutrition() {
                           alt={e.name}
                         />
                       )}
-                      <ActionMenu label={`Optionen für ${e.name}`}><button onClick={() => setDraft(e)}>Bearbeiten</button>
+                      <ActionMenu label={`Optionen für ${e.name}`}><button onClick={() => {setDraft(e);setInputMode(true);setMessage("");}}>Bearbeiten</button>
                       <button
                         onClick={async () => {
                           if (confirm("Eintrag löschen?"))
@@ -489,104 +472,7 @@ export function Nutrition() {
           </details>
         </section>
       )}
-      {view === "Sammlung" && (
-        <section aria-label="Sammlung">
-          <article>
-            <h2>Lebensmittel suchen</h2>
-            <label>
-              Name oder Barcode
-              <input value={query} onChange={(e) => setQuery(e.target.value)} />
-            </label>
-            <button
-              disabled={busy || !query.trim()}
-              onClick={() => search(query)}
-            >
-              {busy ? "Suche …" : "Open Food Facts durchsuchen"}
-            </button>
-            <button onClick={() => setScan(true)}>Barcode scannen</button>
-            <p>
-              Suche sendet den Suchbegriff an Open Food Facts. Ergebnisse
-              bleiben offline verfügbar. Angaben können unvollständig sein.
-            </p>
-            {scan && (
-              <Scanner
-                onClose={() => setScan(false)}
-                onCode={(code) => {
-                  setScan(false);
-                  setQuery(code);
-                  void search(code);
-                }}
-              />
-            )}
-            {results.map((f) => (
-              <button
-                key={f.id}
-                onClick={() =>
-                  setDraft({
-                    ...fresh(),
-                    name: f.name,
-                        notes: f.notes, kcal:f.kcal, protein:f.protein, carbs:f.carbs, fat:f.fat,
-                  })
-                }
-              >
-                {f.name}
-              </button>
-            ))}
-          </article>
-          <article>
-            <h2>Eigene Lebensmittel & Rezepte</h2>
-            {foods
-              .filter(
-                (f) =>
-                  f.kind !== "cache" &&
-                  (f.kind === "drink"
-                    ? settings.hydration
-                    : settings.nutrition) &&
-                  f.name.toLowerCase().includes(query.toLowerCase()),
-              )
-              .map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() =>
-                    setDraft({
-                      ...fresh(),
-                      name: f.name,
-                      notes: f.notes, kcal:f.kcal, protein:f.protein, carbs:f.carbs, fat:f.fat,
-                      meal: f.kind === "drink" ? "Getränke" : fresh().meal,
-                      unit: f.kind === "drink" ? "ml" : "Portion",
-                      amount: f.kind === "drink" ? preferences.drinkAmount : 1,
-                    })
-                  }
-                >
-                  {f.name} ·{" "}
-                  {f.kind === "recipe"
-                    ? "Rezept"
-                    : f.kind === "drink"
-                      ? "Getränk"
-                      : "Lebensmittel"}
-                </button>
-              ))}
-          </article>
-          <article>
-            <h2>Häufig verwendet</h2>
-            {frequent.map((e) => (
-              <button
-                key={e.id}
-                onClick={() =>
-                  setDraft({
-                    ...e,
-                    id: id(),
-                    date,
-                    time: new Date().toTimeString().slice(0, 5),
-                  })
-                }
-              >
-                {e.name} erneut hinzufügen
-              </button>
-            ))}
-          </article>
-        </section>
-      )}
+      {view === "Sammlung" && <section aria-label="Sammlung"><article><h2>Deine Lebensmittelsammlung</h2><p>{foods.filter(f=>f.favorite).length} Favoriten · {foods.filter(f=>f.kind==="recipe").length} Rezepte</p><button className="primary" onClick={()=>{setDraft(fresh());setInputMode(false);setMessage("");}}>Lebensmittel suchen & Sammlung öffnen</button><p>Favoriten, zuletzt verwendete Lebensmittel, eigene Lebensmittel und Rezepte sind lokal verfügbar.</p></article></section>}
       {view === "Historie" && (
         <article>
           <h2>Mahlzeitenhistorie</h2>
