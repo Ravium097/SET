@@ -1,3 +1,4 @@
+import { GoalsEditor } from "./Goals";
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Link } from "react-router-dom";
@@ -10,6 +11,7 @@ import {
 } from "../../data";
 import { localDay } from "./service";
 export function NutritionPreferencesForm({ settings }: { settings: Settings }) {
+  useEffect(()=>{if(window.location.hash==="#nutrition-goals")document.getElementById("nutrition-goals")?.scrollIntoView({block:"start"});},[]);
   const [value, setValue] = useState<NutritionPreferences>(
     settings.nutritionPreferences ?? nutritionDefaults,
   );
@@ -35,7 +37,7 @@ export function NutritionPreferencesForm({ settings }: { settings: Settings }) {
       setMessage("Ernährungseinstellungen gespeichert.");
     } catch {
       setMessage(
-        "Bitte 1–12 eindeutige Kategorien (ohne „Getränke“), Uhrzeiten im Format HH:MM und eine Trinkmenge von 1–5000 ml angeben. Speichern fehlgeschlagen.",
+        "Bitte Ziele und Körperangaben prüfen: Kalorien positiv, Makros nicht negativ, Alter 18–120 Jahre. Außerdem 1–12 eindeutige Kategorien (ohne „Getränke“), Uhrzeiten im Format HH:MM und eine Trinkmenge von 1–5000 ml angeben. Speichern fehlgeschlagen.",
       );
     }
   }
@@ -56,9 +58,9 @@ export function NutritionPreferencesForm({ settings }: { settings: Settings }) {
         Nährwertinformationen anzeigen
       </label>
       <p>
-        Blendet vorhandene Nährwertangaben ein oder aus. Es werden keine
-        Kalorienziele berechnet.
+        Blendet vorhandene Nährwertangaben und deine persönlichen Tageswerte ein oder aus.
       </p>
+      <GoalsEditor value={value.goals} onChange={goals=>setValue({...value,goals})}/>
       <details>
         <summary>Mahlzeitenkategorien</summary>
         <label>

@@ -31,3 +31,11 @@
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @keyframes sheet-in { from { transform:translateY(24px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
 @media(prefers-reduced-motion:reduce) { .bottom-sheet { animation:none; } }
+.nutrition-goals { padding-block:16px; scroll-margin-top:16px; }
+.goal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.goal-grid > div { padding:12px; border-radius:14px; background:var(--surface-alt); min-width:0; }
+.goal-grid strong,.goal-grid span,.goal-grid > div > small { display:block; }
+.goal-grid strong { margin-top:8px; font-size:23px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.goal-grid strong small,.goal-grid span { font-size:12px; font-weight:400; color:var(--muted); }
+.goals-summary > p,.nutrition-goals > p { font-size:13px; }
+.goals-summary .row a { font-size:13px; }
