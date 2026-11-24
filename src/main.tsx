@@ -342,7 +342,7 @@ export function Numeric({value,onChange,step,label}:{value:number|null;onChange:
  const [focused,setFocused]=useState(false);
  useEffect(()=>{if(!focused)setDraft(value===null?'':String(value))},[value,focused]);
  function change(n:number){setDraft(String(n));onChange(n)}
- return <div className="numeric"><button aria-label={`${label} verringern`} onClick={()=>change(Math.max(0,(value??0)-step))}>−</button><input aria-label={label} inputMode={step===1?'numeric':'decimal'} value={draft} placeholder="–" onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onChange={e=>{const text=e.target.value;const normalized=text.replace(',','.');if(normalized===''||(step===1?/^\d+$/:/^\d+(\.\d*)?$/).test(normalized)){setDraft(text);onChange(normalized===''?null:Number(normalized))}}}/><button aria-label={`${label} erhöhen`} onClick={()=>change((value??0)+step)}>+</button></div>
+ return <div className="numeric"><span className="numeric-label">{label}{step !== 1 ? " · kg" : ""}</span><button aria-label={`${label} verringern`} onClick={()=>change(Math.max(0,(value??0)-step))}>−</button><input aria-label={label} inputMode={step===1?'numeric':'decimal'} value={draft} placeholder="–" onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onChange={e=>{const text=e.target.value;const normalized=text.replace(',','.');if(normalized===''||(step===1?/^\d+$/:/^\d+(\.\d*)?$/).test(normalized)){setDraft(text);onChange(normalized===''?null:Number(normalized))}}}/><button aria-label={`${label} erhöhen`} onClick={()=>change((value??0)+step)}>+</button></div>
 }
 function WorkoutExerciseHeading({
   item,

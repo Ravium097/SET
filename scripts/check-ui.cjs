@@ -111,6 +111,17 @@ const origin = "http://127.0.0.1:4178";
     await page.setViewportSize({width:393,height:852});
     await page.locator('.set').first().scrollIntoViewIfNeeded();
 
+    await page.getByRole('button',{name:'Fokusmodus',exact:true}).click();
+    for(const width of [320,393,820]) {
+      await page.setViewportSize({width,height:852});
+      const fields=await page.locator('.set[data-current="true"] .numeric input').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {width:r.width,left:r.left,right:r.right}}));
+      assert.equal(fields.length,2);
+      assert(fields[0].width>=90 && Math.abs(fields[0].width-fields[1].width)<1 && fields[0].right<fields[1].left,JSON.stringify(fields));
+      assert(await page.getByRole('button',{name:'Satz abschließen ✓',exact:true}).isVisible());
+    }
+    await page.setViewportSize({width:393,height:852});
+    if(process.env.REVIEW_SCREENSHOT) await page.screenshot({path:process.env.REVIEW_SCREENSHOT});
+    await page.getByRole('button',{name:'← Normale Ansicht',exact:true}).click();
     await page.getByRole("button", { name: "Gewicht erhöhen" }).click();
     await page.waitForTimeout(100);
     assert.equal(
@@ -132,6 +143,11 @@ const origin = "http://127.0.0.1:4178";
     await page.waitForURL("**/history");
     await page.getByRole("link", { name: /QA Template/ }).waitFor();
     await page.goto(origin + "/stats");
+    await page.getByLabel('Muskelgruppen Vorderseite',{exact:true}).waitFor();
+    await page.getByRole('button',{name:'Hinten',exact:true}).click();
+    await page.getByLabel('Muskelgruppen Rückseite',{exact:true}).waitFor();
+    await page.getByRole('button',{name:'Vorne',exact:true}).click();
+
     await page.getByText("Trainingsvolumen", { exact: true }).waitFor();
     await page.goto(origin + "/settings");
     const downloading = page.waitForEvent("download");

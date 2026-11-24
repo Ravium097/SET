@@ -578,7 +578,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 input::-webkit-date-and-time-value { min-width: 0; text-align: left; }
 input::-webkit-datetime-edit { min-width: 0; padding: 0; }
 /* BASE. — flat editorial surfaces shared by all themes. */
-:root { --accent:#b4db43; }
+:root { --accent:var(--ink); }
 :root[data-theme="glass"] { --bg:#f5f5f7; --surface:#fff; --surface-alt:#eeeef0; --ink:#111; --muted:#606066; --border:#dcdce0; --line:#dcdce0; --field:#eeeef0; }
 body, #root { background:var(--bg); }
 article, details, .tile, nav, button, .button { box-shadow:none; background-image:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
@@ -595,7 +595,7 @@ article > button, article > .button, .diary-entry > button { margin:4px 8px 4px 
 .app-dock { background:var(--bg); border-top:1px solid var(--border,var(--line)); }
 .app-dock nav { border:0; border-radius:0; box-shadow:none; background:var(--bg); max-width:680px; }
 .app-dock nav a { border-radius:6px; }
-.app-dock nav a.active { background:var(--accent); color:#111; }
+.app-dock nav a.active { background:var(--accent); color:var(--bg); }
 summary { list-style:none; display:flex; align-items:center; gap:8px; cursor:pointer; }
 summary::-webkit-details-marker { display:none; }
 summary::before { content:""; flex:none; width:6px; height:6px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); transition:transform .15s; }
@@ -612,7 +612,7 @@ progress::-webkit-progress-value { background:var(--accent); border-radius:4px; 
 progress::-moz-progress-bar { background:var(--accent); border-radius:4px; }
 .segmented { display:flex; gap:4px; margin:8px 0; }
 .segmented button { flex:1; min-width:0; padding:10px 6px; margin:0; background:transparent; }
-.segmented button[aria-pressed="true"], .diary-switch button[aria-pressed="true"] { background:var(--accent); color:#111; }
+.segmented button[aria-pressed="true"], .diary-switch button[aria-pressed="true"] { background:var(--accent); color:var(--bg); }
 .workout-fields .set, .workout-fields .setheading { display:grid; grid-template-columns:32px minmax(0,1fr) minmax(0,1fr) 44px; gap:8px; align-items:center; padding:8px 0; margin-left:0; margin-right:0; border:0; }
 .workout-fields .set.current { outline:1px solid var(--ink); outline-offset:3px; border-radius:6px; }
 .workout-fields .set > button { width:32px; min-width:0; padding:4px 0; margin:0; }
@@ -621,7 +621,7 @@ progress::-moz-progress-bar { background:var(--accent); border-radius:4px; }
 .workout-fields .set .numeric input { grid-column:1/-1; grid-row:1; width:100%; min-width:0; min-height:44px; font-size:20px; margin:0; padding:8px 4px; text-align:center; }
 .workout-fields .set .numeric button { width:100%; min-width:0; min-height:36px; margin:0; padding:4px; }
 .focus-workout .setheading { display:none; }
-.focus-workout .set { grid-template-columns:32px minmax(0,1fr) minmax(0,1fr); }
+
 .timer strong { font-size:24px; font-variant-numeric:tabular-nums; }
 .date-field { display:block; position:relative; min-width:0; }
 .date-field > input { color:transparent; }
@@ -635,3 +635,11 @@ progress::-moz-progress-bar { background:var(--accent); border-radius:4px; }
 details { border-radius:14px; }
 .exercise-swap > summary, .effort > summary, .diary-details > summary { min-height:20px; }
 .workout-fields > details > button { margin:4px 8px 4px 0; }
+.numeric-label { display:none; }
+.focus-workout .workout-fields .set { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:12px 8px; }
+.focus-workout .workout-fields .set > button:first-child { grid-column:1/-1; width:100%; text-align:left; font-size:20px; white-space:nowrap; }
+.focus-workout .workout-fields .set .numeric { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.focus-workout .numeric-label { display:block; grid-column:1/-1; grid-row:1; font-size:12px; color:var(--muted); }
+.focus-workout .workout-fields .set .numeric input { grid-row:2; min-height:56px; font-size:26px; }
+.focus-workout .workout-fields .set .numeric button { min-height:44px; }
+.focus-workout .workout-fields .set > .focus-complete { grid-column:1/-1; width:100%; min-height:52px; font-size:18px; }
