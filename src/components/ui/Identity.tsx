@@ -20,7 +20,7 @@ export function Brand() {
   return (
     <span className="brand-lockup">
       <span className="brand-word">
-        SET<span className="brand-slash">/</span>
+        BASE.
       </span>
       <span className="brand-caption">PRECISION IN EVERY REP.</span>
     </span>

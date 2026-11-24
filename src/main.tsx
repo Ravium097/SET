@@ -107,7 +107,7 @@ function App() {
       <main className={["/", "/training", "/history", "/stats"].includes(pathname) ? "overview" : ""}>
         <header>
           <Link to="/" className="logo">
-            SET<span>●</span>
+            BASE.
           </Link>
           <Link aria-label="Einstellungen" to="/settings">
             <Gear />
@@ -1077,7 +1077,7 @@ function Settings() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = `SET-backup-${day()}.json`;
+            a.download = `BASE-backup-${day()}.json`;
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 10000);
           }}
@@ -1141,7 +1141,7 @@ function Settings() {
         </button>
       </article>
       <p>
-        SET · Ansicht
+        BASE. · Ansicht
         <br />
         Auf dem iPhone: Safari → Teilen → Zum Home-Bildschirm.
       </p>

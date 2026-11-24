@@ -1,4 +1,6 @@
-# SET
+# BASE.
+
+BASE. ist der neue Name von SET. Die bestehende URL, IndexedDB-Datenbank `SET` und lokalen Speicherschlüssel bleiben für den Datenerhalt unverändert. Alte SET-Backups können weiterhin importiert werden. Neue Exporte heißen `BASE-backup-…`. Neuinstallationen verwenden den Namen BASE.; bestehende iOS-Home-Bildschirm-Beschriftungen können den alten Namen behalten.
 
 Mobile-first Workout-PWA mit React, TypeScript, Vite, Tailwind, Dexie/IndexedDB, React Router, Recharts, date-fns. Monochrome Oberfläche; keine Accounts, Werbung oder vorbefüllte Trainingshistorie.
 

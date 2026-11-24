@@ -285,7 +285,7 @@ export async function exportData() {
 export async function restore(raw: unknown) {
   const b = backupSchema.parse(raw);
   if (b.schemaVersion === 2 && (!b.nutrition || !b.foods || !b.dayNotes))
-    throw Error("Unvollständiges SET-3-Backup");
+    throw Error("Unvollständiges Backup");
   for (const rows of [
     b.exercises,
     b.workouts,

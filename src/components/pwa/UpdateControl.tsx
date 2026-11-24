@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export const RELEASE = "SET 3.0 · Startseite 05";
+export const RELEASE = "BASE. 3.0 · Rebranding 06";
 let registrationPromise: Promise<ServiceWorkerRegistration> | undefined;
 function registration() {
   return (registrationPromise ??= navigator.serviceWorker
@@ -100,7 +100,7 @@ export function UpdateControl({ compact = false }: { compact?: boolean }) {
   async function reload() {
     if (
       !confirm(
-        "SET neu laden? Beende zuerst deine aktuelle Eingabe und warte auf „Gespeichert“. Gespeicherte Trainings bleiben erhalten.",
+        "BASE. neu laden? Beende zuerst deine aktuelle Eingabe und warte auf „Gespeichert“. Gespeicherte Trainings bleiben erhalten.",
       )
     )
       return;
@@ -120,7 +120,7 @@ export function UpdateControl({ compact = false }: { compact?: boolean }) {
   if (compact && !ready) return null;
   return (
     <section className="update-control" aria-label="App-Version und Updates">
-      <p className="technical-label">SET / {RELEASE}</p>
+      <p className="technical-label">BASE. / {RELEASE}</p>
       {ready && (
         <p role="status">
           Neue Version bereit. Gespeicherte Trainings bleiben erhalten.

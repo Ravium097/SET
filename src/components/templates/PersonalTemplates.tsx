@@ -47,7 +47,7 @@ export function PersonalTemplates() {
       ))}
       <p>
         <small>
-          SET unterstützt derzeit eine Pause pro Übung. Die abweichenden
+          BASE. unterstützt derzeit eine Pause pro Übung. Die abweichenden
           Satzpausen bei Tricep Pushdown und Bicep Curl bleiben in den
           Übungsnotizen erhalten. Bei fehlenden Pausen gilt deine Standardpause.
         </small>

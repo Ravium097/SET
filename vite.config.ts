@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: "prompt",
       injectRegister: false,
       manifest: {
-        name: "SET",
-        short_name: "SET",
+        name: "BASE.",
+        short_name: "BASE.",
         display: "standalone",
         start_url: "/",
         theme_color: "#111111",

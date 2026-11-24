@@ -236,7 +236,7 @@ export function Nutrition() {
     .slice(0, 8);
   return (
     <>
-      <p className="eyebrow">SET / DAILY</p>
+      <p className="eyebrow">BASE. / DAILY</p>
       <h1>Dein Tagebuch.</h1>
       <Link className="diary-settings-link" to="/settings">
         Ernährungseinstellungen →
