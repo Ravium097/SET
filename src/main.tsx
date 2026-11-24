@@ -213,7 +213,6 @@ function Dashboard() {
   const chart = Array.from(points.reduce((map, p) => map.set(p.date, (map.get(p.date) ?? 0) + p.value), new Map<string, number>()), ([date, value]) => ({date, value}));
   if (!all) return <p role="status">Dashboard wird geladen …</p>;
   return <div className="dashboard">
-    <DailyOverview/>
     <p className="eyebrow">{format(today, "EEEE, d. MMMM", {locale: de})}</p>
     <h1>Dein Training.<br/><span>Alles im Blick.</span></h1>
     {!all.length && <Onboarding/>}
@@ -252,6 +251,7 @@ function Dashboard() {
       {w.exercises.map(e => <p key={e.id}>{e.name} · {e.sets.filter(isCompletedWork).length} Sätze</p>)}<Link className="action" to={`/workout/${w.id}`}>Workout öffnen <ArrowRight size={16}/></Link></details>)}
       {!done.length && <article className="empty"><Dumbbell size={36}/><h3>Dein erster Satz wartet.</h3><p>Nach deinem ersten abgeschlossenen Workout siehst du hier deinen Fortschritt.</p></article>}
     </section>
+    <DailyOverview/>
   </div>;
 }
 function WorkoutCard({ w }: { w: Workout }) {
