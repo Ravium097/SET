@@ -147,7 +147,9 @@ export const nutritionDefaults: NutritionPreferences = {
   drinkName: "Wasser",
   showDrinkTotal: true,
 };
+export const dashboardWidgetIds = ["training", "body", "activity", "volume", "weekly", "nutrition"] as const;
 export const settingsSchema = z.object({
+  dashboardWidgets: z.array(z.enum(dashboardWidgetIds)).max(6).refine(v=>new Set(v).size===v.length).optional(),
   id: z.literal("settings"),
   nutrition: z.boolean().optional(),
   hydration: z.boolean().optional(),

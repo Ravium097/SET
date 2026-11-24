@@ -25,3 +25,11 @@
 ## Geräteprüfung vor Freigabe
 
 Auf iPhone in beiden Modi prüfen: Trainingsstart, Satz erfassen, Pause, Abschluss, Tageszusammenfassung und Verlauf; Vorlagen erstellen/duplizieren/bearbeiten/löschen; Tagebuch mit unbekannten Nährwerten und Sammlung; Module aus-/einschalten; Backup exportieren/wiederherstellen; installierte PWA offline öffnen; Tastatur und Safe Areas auf allen Ansichten.
+
+## Widget-Dashboard nach visueller Vorlage
+
+Die Startseite verwendet nun ein kompaktes Zweispaltenraster mit Trainings- und Körpergewichtskachel, einem Punktekalender über drei Monate und einer breiten Volumenkarte. Wochenkennzahlen und optionales Tagebuch bleiben erreichbar. Widget-Sichtbarkeit und Reihenfolge der Auswahl liegen optional in den bestehenden Settings und werden im Backup gesichert. Der Tagebuch-Widget verschwindet bei deaktivierten Modulen vollständig.
+
+Aktive Trainings führen direkt zur bestehenden Erfassung. Das Körpergewicht stammt ausschließlich aus dem freiwillig gespeicherten Profil; fehlende Werte erscheinen als Strich. Der Aktivitätskalender zählt tatsächliche abgeschlossene Trainingstage, das Volumen verwendet die bestehenden Berechnungsfunktionen für die letzten sieben Kalendertage. Keine fiktiven Messwerte oder Körpergewichtshistorien.
+
+Validierung: 84 Tests in 20 Dateien erfolgreich, einschließlich Kalender-Jahreswechsel, Zeitfenster, aktivem Training und Widget-Einstellungen im Backup. TypeScript- und Produktionsbuild erfolgreich. Komponentenhierarchie, Hook-Reihenfolge, benannte Bedienelemente und Theme-Tokens anhand der React-Checkliste geprüft. Die bisher dokumentierte Einschränkung der visuellen iPhone-/Browserprüfung gilt weiterhin.
