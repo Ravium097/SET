@@ -1,3 +1,4 @@
+import { GoalsSummary } from "./Goals";
 import "./nutrition.css";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { FoodPicker, NutrientFields } from "./FoodPicker";
@@ -383,6 +384,7 @@ export function Nutrition() {
 
       {view === "Tag" && (
         <section aria-label="Mahlzeiten">
+          {settings.nutrition && preferences.showNutrients && <GoalsSummary goals={preferences.goals} entries={daily}/>}
           {[
             ...new Set([
               ...preferences.categories,

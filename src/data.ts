@@ -98,7 +98,23 @@ export const foodSchema = z.object({
 });
 export type NutritionEntry = z.infer<typeof nutritionSchema>;
 export type Food = z.infer<typeof foodSchema>;
+export const nutritionGoalsSchema = z.object({
+  enabled: z.boolean(),
+  kcal: z.number().positive().finite().optional(),
+  protein: z.number().nonnegative().finite().optional(),
+  carbs: z.number().nonnegative().finite().optional(),
+  fat: z.number().nonnegative().finite().optional(),
+  profile: z.object({
+    age: z.number().int().min(18).max(120).optional(),
+    weight: z.number().positive().finite().optional(),
+    height: z.number().positive().finite().optional(),
+    coefficient: z.enum(["female", "male"]).optional(),
+    activity: z.number().min(1.2).max(2.4).finite().optional(),
+  }).optional(),
+});
+export type NutritionGoals = z.infer<typeof nutritionGoalsSchema>;
 export const nutritionPreferencesSchema = z.object({
+  goals: nutritionGoalsSchema.optional(),
   showNutrients: z.boolean(),
   categories: z
     .array(

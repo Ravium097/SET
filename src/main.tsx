@@ -95,8 +95,10 @@ const fmt = (n: number) =>
   n.toLocaleString("de-DE", { maximumFractionDigits: 1 });
 const error = (e: unknown) => alert(germanError(e));
 function App() {
-  const { pathname } = useLocation();
-  useEffect(() => { document.querySelector("main")?.scrollTo(0, 0); }, [pathname]);
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (!hash) document.querySelector("main")?.scrollTo(0, 0);
+  }, [pathname,hash]);
   useEffect(() => {
     const viewport = window.visualViewport;
     const resize = () => {

@@ -24,3 +24,11 @@ Die vorhandenen IndexedDB-Tabellen `foods` und `nutrition` bleiben bestehen. Zus
 ## Grenzen
 
 Open Food Facts ist eine öffentliche Community-Datenbank; Vollständigkeit und Trefferqualität variieren. Die Tippfehlertoleranz ist lokal ein Zeichenvergleich, keine semantische oder KI-basierte Zuordnung. Bilder benötigen bei der ersten Anzeige eine Verbindung. Bei Fehlern stehen lokale Produkte und die manuelle Eingabe zur Verfügung.
+
+## Persönliche Tagesziele
+
+Unter Einstellungen → Ernährungseinstellungen → Kalorien- und Makroziele lassen sich Kalorien, Eiweiß, Kohlenhydrate und Fett unabhängig festlegen. Die Anzeige ist optional; Ausschalten erhält die Werte. Leere Felder bedeuten kein Ziel. Eine zusätzliche lokale Schätzung für Erwachsene verwendet Mifflin–St Jeor mit explizit gewähltem Aktivitätsfaktor. Sie wird nur auf Knopfdruck übernommen und erst mit den Ernährungseinstellungen gespeichert. Es werden keine Makroverteilungen oder Gewichtsveränderungen vorgegeben.
+
+Tageswerte addieren ausschließlich bekannte Nährwerte. Bei fehlenden Angaben werden die Summen als unvollständig gekennzeichnet; unbekannte Portionen werden nicht geschätzt. Die optionalen Ziele und Körperangaben bleiben in der bestehenden Settings-Tabelle und werden mit Backups exportiert/wiederhergestellt. Alte Backups bleiben gültig.
+
+Validierung: 80 Tests in 19 Dateien erfolgreich, darunter neue Tests für Formel, Eingabevalidierung, unbekannte Portionswerte, Zielübernahme und Backup-Roundtrip. Die vorher dokumentierte Einschränkung der visuellen iPhone-Prüfung besteht fort.
