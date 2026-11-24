@@ -1,3 +1,4 @@
+import {DateField} from "../../components/ui/DateField";
 import { nutritionDefaults } from "../../data";
 import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -243,13 +244,7 @@ export function Nutrition() {
       </Link>
       <label>
         Tag
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            if (e.target.value) setDate(e.target.value);
-          }}
-        />
+        <DateField value={date} onChange={value=>{if(value)setDate(value)}}/>
       </label>
       <div className="diary-switch" role="group" aria-label="Tagebuchansicht">
         {["Tag", "Sammlung", "Historie"].map((tab) => (
@@ -265,9 +260,6 @@ export function Nutrition() {
           </button>
         ))}
       </div>
-      <button className="primary" onClick={() => setDraft(fresh())}>
-        Eintrag hinzufügen
-      </button>
       <p role="status">{message}</p>
       {draft && (
         <article ref={editor} tabIndex={-1} className="diary-editor">
@@ -345,6 +337,7 @@ export function Nutrition() {
               ))}
             </select>
           </label>
+          {preferences.showNutrients && <details><summary>Nährwerte · optional</summary><p>Je 100 g/ml. Für Portionen erfolgt keine Umrechnung.</p>{([['kcal','Energie (kcal)'],['protein','Eiweiß (g)'],['carbs','Kohlenhydrate (g)'],['fat','Fett (g)']] as const).map(([key,label])=><label key={key}>{label}<input type="number" min="0" step="any" value={draft[key]??''} onChange={e=>setDraft({...draft,[key]:e.target.value===''?undefined:Number(e.target.value)})}/></label>)}</details>}
           <label>
             Notizen / Rezeptzutaten
             <textarea
@@ -388,7 +381,7 @@ export function Nutrition() {
                       id: id(),
                       name: draft.name,
                       kind,
-                      notes: draft.notes,
+                      notes: draft.notes, kcal:draft.kcal, protein:draft.protein, carbs:draft.carbs, fat:draft.fat,
                     });
                     setMessage("In deiner Sammlung gespeichert.");
                   } catch {
@@ -440,6 +433,7 @@ export function Nutrition() {
                 {!daily.some((e) => e.meal === meal) && (
                   <p className="diary-empty">Noch kein Eintrag</p>
                 )}
+                {preferences.showNutrients && daily.some(e=>e.meal===meal) && <p className="meal-nutrients">{([['kcal','kcal'],['protein','g Eiweiß'],['carbs','g Kohlenhydrate'],['fat','g Fett']] as const).map(([key,label])=>{const rows=daily.filter(e=>e.meal===meal);const complete=rows.every(e=>e.unit!=="Portion"&&e[key]!==undefined);return `${complete ? Math.round(rows.reduce((sum,e)=>sum+(e[key]??0)*e.amount/100,0)) : '–'} ${label}`}).join(' · ')}<small>– = Angaben fehlen oder Portionsgröße unbekannt</small></p>}
                 {meal === "Getränke" && preferences.showDrinkTotal && (
                   <p>
                     {daily
@@ -456,7 +450,7 @@ export function Nutrition() {
                         {e.time} · {e.name}
                       </strong>
                       <p>
-                        {e.amount} {e.unit}
+                        {e.amount} {e.unit === "Portion" && e.amount !== 1 ? "Portionen" : e.unit}
                         {preferences.showNutrients &&
                         e.kcal !== undefined &&
                         e.unit !== "Portion"
@@ -530,8 +524,7 @@ export function Nutrition() {
                   setDraft({
                     ...fresh(),
                     name: f.name,
-                    kcal: f.kcal,
-                    notes: f.notes,
+                        notes: f.notes, kcal:f.kcal, protein:f.protein, carbs:f.carbs, fat:f.fat,
                   })
                 }
               >
@@ -557,7 +550,7 @@ export function Nutrition() {
                     setDraft({
                       ...fresh(),
                       name: f.name,
-                      notes: f.notes,
+                      notes: f.notes, kcal:f.kcal, protein:f.protein, carbs:f.carbs, fat:f.fat,
                       meal: f.kind === "drink" ? "Getränke" : fresh().meal,
                       unit: f.kind === "drink" ? "ml" : "Portion",
                       amount: f.kind === "drink" ? preferences.drinkAmount : 1,

@@ -54,6 +54,9 @@ export const nutritionSchema = z.object({
     .regex(/^data:image\/(jpeg|png|webp);base64,/)
     .optional(),
   kcal: z.number().nonnegative().finite().optional(),
+  protein: z.number().nonnegative().finite().optional(),
+  carbs: z.number().nonnegative().finite().optional(),
+  fat: z.number().nonnegative().finite().optional(),
 });
 export const foodSchema = z.object({
   id: z.string(),
@@ -61,6 +64,9 @@ export const foodSchema = z.object({
   kind: z.enum(["food", "recipe", "drink", "cache"]),
   notes: z.string(),
   kcal: z.number().nonnegative().finite().optional(),
+  protein: z.number().nonnegative().finite().optional(),
+  carbs: z.number().nonnegative().finite().optional(),
+  fat: z.number().nonnegative().finite().optional(),
 });
 export type NutritionEntry = z.infer<typeof nutritionSchema>;
 export type Food = z.infer<typeof foodSchema>;

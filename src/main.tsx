@@ -1,3 +1,4 @@
+import {DateField} from "./components/ui/DateField";
 import { NutritionPreferencesForm, MealReminders } from "./features/nutrition/Preferences";
 import { Nutrition, Modules, DailyOverview } from "./features/nutrition/Nutrition";
 import { StartupBoundary } from "./components/pwa/StartupBoundary";
@@ -214,13 +215,12 @@ function Dashboard() {
   if (!all) return <p role="status">Dashboard wird geladen …</p>;
   return <div className="dashboard">
     <p className="eyebrow">{format(today, "EEEE, d. MMMM", {locale: de})}</p>
-    <h1>Dein Training.<br/><span>Alles im Blick.</span></h1>
+    <h1>{active ? active.name : "Training heute"}</h1>
     {!all.length && <Onboarding/>}
     <article className="dashboard-start">
-      <small>{active ? "DEIN AKTIVES WORKOUT" : "BEREIT FÜR DEINEN NÄCHSTEN SATZ?"}</small>
-      <h2>{active ? active.name : "Heute ist dein Trainingstag."}</h2>
-      <p>{active ? "Mach dort weiter, wo du aufgehört hast." : "Wähle eine Vorlage oder starte ein freies Workout."}</p>
-      <Link className="primary action" to={active ? `/workout/${active.id}` : "/training"}><Dumbbell/>{active ? "Workout fortsetzen" : "Workout starten"}<ArrowRight/></Link>
+      <h2>{active ? "Aktives Training" : "Kein aktives Training"}</h2>
+      <p>{active ? `${active.exercises.length} Übungen` : "Vorlage oder freies Training wählen."}</p>
+      <Link className="primary action" to={active ? `/workout/${active.id}` : "/training"}><Dumbbell/>{active ? "Training fortsetzen" : "Training auswählen"}<ArrowRight/></Link>
     </article>
     <section aria-labelledby="week-heading">
       <div className="row"><h2 id="week-heading">Deine Woche</h2><Link to="/history">Verlauf →</Link></div>
@@ -231,12 +231,12 @@ function Dashboard() {
       })}</div>
       <div aria-live="polite"><p>{format(new Date(selected + "T12:00:00"), "EEEE, d. MMMM", {locale: de})}</p>
       {done.filter(w => w.date === selected).map(w => <WorkoutCard key={w.id} w={w}/>)}
-      {!done.some(w => w.date === selected) && <p className="dashboard-note">Keine abgeschlossenen Workouts an diesem Tag.</p>}</div>
+      {!done.some(w => w.date === selected) && <p className="dashboard-note">Kein Training.</p>}</div>
     </section>
     <section aria-labelledby="progress-heading">
       <div className="row"><h2 id="progress-heading">Dein Fortschritt</h2><Link to="/stats">Details →</Link></div>
       <div className="dashboard-filters">
-        <label>Zeitraum<select value={range} onChange={e => setRange(e.target.value)}><option value="7">7 Tage</option><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="all">Gesamt</option></select></label>
+        <div><span>Zeitraum</span><div className="segmented" role="group" aria-label="Zeitraum">{[["7","7T"],["30","30T"],["90","90T"],["all","Alle"]].map(([value,label])=><button key={value} aria-pressed={range===value} onClick={()=>setRange(value)}>{label}</button>)}</div></div>
         <label>Übung<select value={exercise} onChange={e => setExercise(e.target.value)}><option value="">Alle Übungen</option>{names.map(n => <option key={n}>{n}</option>)}</select></label>
       </div>
       <article>
@@ -249,7 +249,7 @@ function Dashboard() {
     <section aria-labelledby="recent-heading"><div className="row"><h2 id="recent-heading">Letzte Workouts</h2><Link to="/history">Alle →</Link></div>
       {done.slice(0,3).map(w => <details key={w.id}><summary><strong>{w.name}</strong><br/><small>{format(new Date(w.date + "T12:00:00"), "dd.MM.yyyy")} · {count(w)} Sätze{w.duration !== null ? ` · ${Math.round(w.duration / 60)} min` : ""}</small></summary>
       {w.exercises.map(e => <p key={e.id}>{e.name} · {e.sets.filter(isCompletedWork).length} Sätze</p>)}<Link className="action" to={`/workout/${w.id}`}>Workout öffnen <ArrowRight size={16}/></Link></details>)}
-      {!done.length && <article className="empty"><Dumbbell size={36}/><h3>Dein erster Satz wartet.</h3><p>Nach deinem ersten abgeschlossenen Workout siehst du hier deinen Fortschritt.</p></article>}
+      {!done.length && <article className="empty"><Dumbbell size={36}/><h3>Keine Trainings</h3><p>Abgeschlossene Trainings erscheinen hier.</p></article>}
     </section>
     <DailyOverview/>
   </div>;
@@ -269,6 +269,7 @@ function WorkoutCard({ w }: { w: Workout }) {
   );
 }
 function Training() {
+  const libraryCount = useLiveQuery(() => db.exercises.count()) ?? 0;
   const ws = useLiveQuery(() => db.workouts.toArray()) ?? [];
   const navigate = useNavigate();
   async function start(template?: Workout) {
@@ -277,18 +278,17 @@ function Training() {
   }
   return (
     <>
-      <p className="eyebrow">ZEIT FÜR DICH</p>
       <h1>Training</h1>
       <button className="primary action" onClick={() => start().catch(error)}>
         <Plus />
         Freies Training starten
       </button>
       <Link className="tile" to="/library">
-        Übungsbibliothek <Dumbbell />
+        <span>Übungsbibliothek<small>{libraryCount} Übungen</small></span> <Dumbbell />
       </Link>
       {!ws.length && <Onboarding allowDismiss={false} />}
       <h2>Deine Vorlagen</h2>
-      <p>Gewichte und Wiederholungen werden beim Start pro Arbeitssatz aus dem letzten Training derselben Übung übernommen. Ohne passende Werte gelten die Vorlagenwerte.</p>
+      <p>Letzte Satzwerte werden beim Start übernommen.</p>
       <PersonalTemplates />
       {ws
         .filter((w) => w.status === "template")
@@ -450,11 +450,7 @@ function WorkoutFields({
       </label>
       <label>
         Trainingsdatum
-        <input
-          type="date"
-          value={w.date}
-          onChange={(e) => save({ ...w, date: e.target.value })}
-        />
+        <DateField value={w.date} onChange={date=>{if(date)save({...w,date})}}/>
       </label>
       {w.exercises.map((e, i) => {
         const previous = w.status === "active" ? previousPerformance(w, i, history) : null;
@@ -501,7 +497,7 @@ function WorkoutFields({
                   }
                 >
                   <span className="focus-set-label">Satz&nbsp;</span>{s.type === "warmup" ? "W" : j + 1}
-                  <small>−</small>
+
                 </button>
                 <Numeric
                   label="Gewicht"
@@ -551,7 +547,7 @@ function WorkoutFields({
               </div>
               <label className="set-options">Satztyp<select aria-label={`Satztyp Satz ${j + 1}`} value={s.type ?? "work"} onChange={ev => update({type: ev.target.value as "work" | "warmup"})}><option value="work">Arbeitssatz</option><option value="warmup">W · Aufwärmsatz</option></select></label>
               <EffortFields set={s} update={update}/>
-              {rowFocus.current === s.id && nextExercise && <small className="next-preview">Als Nächstes: {nextExercise.name} · Satz {nextExercise.sets.findIndex(s => s.id === rowFocus.next) + 1}</small>}
+              {rowFocus.current === s.id && nextExercise && <small className="next-preview">Nächster Satz: {nextExercise.name} · Satz {nextExercise.sets.findIndex(s => s.id === rowFocus.next) + 1}</small>}
               {previous && <PreviousSet previous={s.type === "warmup" ? undefined : previous.sets[e.sets.slice(0,j).filter(x => x.type !== "warmup").length]} date={previous.date} completed={s.completed} onApply={update} />}
               </React.Fragment>
             );
@@ -646,7 +642,7 @@ function Editor() {
   };
   return (
     <div className={focus ? "editor focus-workout" : "editor"}>
-      {w.status === "active" && <button className="focus-toggle" aria-pressed={focus} onClick={() => setFocus(!focus)}>{focus ? "← Normale Ansicht" : "Focus Mode"}</button>}
+      {w.status === "active" && <button className="focus-toggle" aria-pressed={focus} onClick={() => setFocus(!focus)}>{focus ? "← Normale Ansicht" : "Fokusmodus"}</button>}
       <h1>
         {w.status === "template"
           ? "Vorlage"
@@ -884,7 +880,7 @@ function History() {
           ))}
           {days.map((d) => (
             <button
-              className={`${selected === day(d) ? "selected" : ""} ${isSameDay(d, new Date()) ? "today" : ""}`}
+              className={`${d.getMonth() !== month.getMonth() ? "outside-month" : ""} ${selected === day(d) ? "selected" : ""} ${isSameDay(d, new Date()) ? "today" : ""}`}
               key={day(d)}
               onClick={() => Select(day(d))}
             >
@@ -905,7 +901,7 @@ function History() {
           <WorkoutCard key={w.id} w={w} />
         ))}
       {!ws.some((w) => w.date === selected) && (
-        <p>Für diesen Tag ist kein Training gespeichert.</p>
+        <p>Kein Training.</p>
       )}
     </>
   );

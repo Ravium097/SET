@@ -84,3 +84,10 @@ it("caches API results and searches them offline", async () => {
   await expect(searchFoods("missing")).rejects.toThrow("Offline");
   vi.unstubAllGlobals();
 });
+it('roundtrips optional macronutrients without inventing values for older entries',async()=>{
+ await db.nutrition.put({...entry,protein:12,carbs:40,fat:6});
+ const backup=await exportData(); await restore(JSON.parse(JSON.stringify(backup)));
+ expect(await db.nutrition.get(entry.id)).toMatchObject({protein:12,carbs:40,fat:6});
+ await db.nutrition.put({...entry,id:'legacy'});
+ expect((await db.nutrition.get('legacy'))?.protein).toBeUndefined();
+});

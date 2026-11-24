@@ -98,6 +98,19 @@ const origin = "http://127.0.0.1:4178";
     await page.getByRole("link", { name: "Training", exact: true }).click();
     await page.getByRole("button", { name: "Starten", exact: true }).click();
     await page.getByRole("heading", { name: "Im Training" }).waitFor();
+    for (const width of [320, 393, 820]) {
+      await page.setViewportSize({width,height:852});
+      const alignment = await page.locator('.workout-fields').evaluate(root=>{
+        const header=root.querySelector('.setheading'), row=root.querySelector('.set');
+        const heads=[...header.children].map(e=>e.getBoundingClientRect());
+        const fields=[...row.children].map(e=>e.getBoundingClientRect());
+        return heads.every((h,i)=>Math.abs((h.left+h.width/2)-(fields[i].left+fields[i].width/2))<1) && row.getBoundingClientRect().right<=document.querySelector('main').getBoundingClientRect().right-15;
+      });
+      assert(alignment, `Set grid alignment at ${width}`);
+    }
+    await page.setViewportSize({width:393,height:852});
+    await page.locator('.set').first().scrollIntoViewIfNeeded();
+
     await page.getByRole("button", { name: "Gewicht erhöhen" }).click();
     await page.waitForTimeout(100);
     assert.equal(
@@ -144,24 +157,24 @@ const origin = "http://127.0.0.1:4178";
     await page.getByRole("link", { name: /QA Template/ }).waitFor();
     await page.goto(origin + "/training");
     await page
-      .getByText("Deine Push- & Pull-Vorlagen", { exact: true })
+      .getByText("Drück- und Zugtraining", { exact: true })
       .click();
     await page
-      .getByRole("button", { name: "Push & Pull als Vorlagen speichern" })
+      .getByRole("button", { name: "Drück- und Zugtraining speichern" })
       .click();
     await page
-      .getByRole("heading", { name: "Push Day", exact: true })
+      .getByRole("heading", { name: "Drücktraining", exact: true })
       .waitFor();
     await page
-      .getByRole("heading", { name: "Pull Day", exact: true })
+      .getByRole("heading", { name: "Zugtraining", exact: true })
       .waitFor();
     await page.reload();
     await page
-      .getByRole("heading", { name: "Push Day", exact: true })
+      .getByRole("heading", { name: "Drücktraining", exact: true })
       .waitFor();
     assert.equal(
       await page
-        .getByRole("heading", { name: "Push Day", exact: true })
+        .getByRole("heading", { name: "Drücktraining", exact: true })
         .count(),
       1,
     );

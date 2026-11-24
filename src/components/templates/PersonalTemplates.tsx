@@ -16,7 +16,7 @@ export function PersonalTemplates() {
   const complete = existing?.every(Boolean);
   return (
     <details className="personal-templates">
-      <summary>Deine Push- & Pull-Vorlagen</summary>
+      <summary>Drück- und Zugtraining</summary>
       <p>
         Die Werte aus deinen Screenshots. Als bearbeitbare Vorlagen übernehmen.
       </p>
@@ -75,7 +75,7 @@ export function PersonalTemplates() {
           ? "Wird gespeichert …"
           : complete
             ? "Vorlagen übernommen"
-            : "Push & Pull als Vorlagen speichern"}
+            : "Drück- und Zugtraining speichern"}
       </button>
       <p role="status">{message}</p>
     </details>

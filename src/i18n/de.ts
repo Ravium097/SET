@@ -2,9 +2,9 @@ export const de = {
   themeTitle: "Darstellung",
   dark: "Dunkel",
   light: "Hell",
-  onboardingTitle: "Dein erstes Training",
+  onboardingTitle: "Beispielvorlage",
   onboardingText:
-    "Starte ein freies Training oder lade eine Beispielvorlage. Füge Übungen hinzu, trage Gewicht und Wiederholungen ein und hake jeden erledigten Satz ab.",
+    "Drei Übungen als bearbeitbare Vorlage.",
   loadExample: "Beispielvorlage laden",
   dismiss: "Verstanden",
   currentSet: "Aktueller Satz",

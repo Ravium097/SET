@@ -27,7 +27,7 @@ export const personalPlans: {
 }[] = [
   {
     key: "push",
-    name: "Push Day",
+    name: "Drücktraining",
     exercises: [
       {
         name: "Chest Press",
@@ -123,7 +123,7 @@ export const personalPlans: {
   },
   {
     key: "pull",
-    name: "Pull Day",
+    name: "Zugtraining",
     exercises: [
       {
         name: "Lat Pulldown",

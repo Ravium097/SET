@@ -493,68 +493,6 @@ select:focus-visible, summary:focus-visible { outline:2px solid var(--muted); ou
 .focus-workout .set input[type="checkbox"] { display:none; }
 .focus-workout .set > .focus-complete { background:var(--ink); color:var(--on-ink); font-size:20px; padding:16px; border-radius:12px; }
 
-/* Liquid Glass: opt-in material treatment; layout and typography stay shared.
-   Solid surfaces are the baseline for browsers without backdrop-filter. */
-:root[data-theme="glass"] {
-  --bg:#eaf0f8; --surface:#f7faff; --surface-alt:#e3eaf4;
-  --ink:#172638; --muted:#4c5d72; --border:#b3c1d3;
-  --on-ink:#fff; --timer-button:#34475e;
-  --glass-fill:linear-gradient(145deg, #ffffffd9, #f4f8ffb8);
-  --glass-edge:#ffffffeb;
-  --glass-shadow:inset 0 1px 0 #fff, inset 0 -1px 0 #ffffff70, 0 8px 28px #344b7010;
-}
-:root[data-theme="glass"] #root {
-  background:
-    radial-gradient(ellipse at 0% 15%, #c4d8f0 0, transparent 55%),
-    radial-gradient(ellipse at 100% 65%, #d8d1eb 0, transparent 50%),
-    linear-gradient(160deg, #f5f8fc, var(--bg));
-}
-:root[data-theme="glass"] :is(article, details, .tile, nav) {
-  border-color:var(--glass-edge);
-  box-shadow:var(--glass-shadow);
-}
-:root[data-theme="glass"] :is(.effort, .exercise-swap, details details) {
-  box-shadow:none;
-}
-:root[data-theme="glass"] .app-dock { background:transparent; }
-:root[data-theme="glass"] nav a { border-radius:28px; color:var(--muted); }
-:root[data-theme="glass"] nav a.active {
-  color:var(--ink); background:#dce6f2; box-shadow:inset 0 1px 0 #fff9, 0 2px 8px #30456612;
-}
-:root[data-theme="glass"] :is(button, .button) { box-shadow:inset 0 1px 0 #ffffff80; }
-:root[data-theme="glass"] :is(.primary, .focus-complete) {
-  background:linear-gradient(145deg,#344a65,#172638); color:var(--on-ink);
-}
-:root[data-theme="glass"] .timer {
-  background:linear-gradient(145deg,#344a65,#172638);
-  border:1px solid #ffffff55; box-shadow:inset 0 1px 0 #ffffff40,0 4px 20px #25384d20;
-}
-:root[data-theme="glass"] .timer button { background:#ffffff18; }
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-  :root[data-theme="glass"] :is(article, .workout-fields > details, .dashboard > section > details, nav, .tile) {
-    background:var(--glass-fill);
-    -webkit-backdrop-filter:blur(18px) saturate(130%);
-    backdrop-filter:blur(18px) saturate(130%);
-  }
-  :root[data-theme="glass"] nav { background:linear-gradient(145deg,#ffffffc9,#f1f6ffb0); }
-}
-@media (prefers-reduced-transparency:reduce), (prefers-contrast:more) {
-  :root[data-theme="glass"] #root :is(article, details, .tile, nav, .timer) {
-    -webkit-backdrop-filter:none; backdrop-filter:none;
-    background:var(--surface); border-color:var(--border); box-shadow:none;
-  }
-  :root[data-theme="glass"] #root .timer { background:var(--ink); }
-  :root[data-theme="glass"] #root { background:var(--bg); }
-}
-
-:root[data-theme="glass"] .action { border-radius:18px; }
-/* Functional additions retain the original card design. */
-.update-panel:has(.update-control) { margin-bottom: 16px; }
-.update-control { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
-.update-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.personal-templates summary { min-height: 44px; cursor: pointer; padding-block: 10px; }
-.personal-templates p { overflow-wrap: anywhere; }
-.personal-templates li { margin-bottom: 12px; }
 .previous-set { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 8px; }
 .previous-set small { min-width: 0; overflow-wrap: anywhere; }
 .previous-set button { font-size: 12px; padding: 6px 10px; }
@@ -594,7 +532,7 @@ select:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); out
 .primary, .calendar .selected { color:var(--on-ink); }
 .timer { background:var(--ink); color:var(--on-ink); border-color:var(--border); }
 .timer button { background:var(--timer-button); color:var(--on-ink); }
-:root[data-theme="glass"] .timer { background:linear-gradient(145deg,#344a65,#172638); }
+:root[data-theme="glass"] .timer { background:#111; }
 :root[data-theme="glass"] .timer button { background:#34475e; }
 .focus-workout .set.current .numeric { display:flex; }
 .focus-mode .update-panel { display:none; }
@@ -639,3 +577,61 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 }
 input::-webkit-date-and-time-value { min-width: 0; text-align: left; }
 input::-webkit-datetime-edit { min-width: 0; padding: 0; }
+/* BASE. — flat editorial surfaces shared by all themes. */
+:root { --accent:#b4db43; }
+:root[data-theme="glass"] { --bg:#f5f5f7; --surface:#fff; --surface-alt:#eeeef0; --ink:#111; --muted:#606066; --border:#dcdce0; --line:#dcdce0; --field:#eeeef0; }
+body, #root { background:var(--bg); }
+article, details, .tile, nav, button, .button { box-shadow:none; background-image:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+article, .tile { border-radius:14px; border:1px solid var(--border,var(--line)); }
+h1 { font-size:28px; font-weight:650; letter-spacing:normal; }
+h2 { font-size:21px; font-weight:650; letter-spacing:normal; }
+h3 { font-size:17px; font-weight:650; }
+button, .button { border-radius:8px; }
+button.primary, a.primary, .focus-complete { background:var(--ink); color:var(--bg); border:0; box-shadow:none; }
+button.action { display:flex; align-items:center; justify-content:center; gap:8px; }
+article > button, article > .button, .diary-entry > button { margin:4px 8px 4px 0; }
+.button-row { display:flex; flex-wrap:wrap; gap:8px; }
+.tile small { display:block; color:var(--muted); font-size:13px; margin-top:4px; }
+.app-dock { background:var(--bg); border-top:1px solid var(--border,var(--line)); }
+.app-dock nav { border:0; border-radius:0; box-shadow:none; background:var(--bg); max-width:680px; }
+.app-dock nav a { border-radius:6px; }
+.app-dock nav a.active { background:var(--accent); color:#111; }
+summary { list-style:none; display:flex; align-items:center; gap:8px; cursor:pointer; }
+summary::-webkit-details-marker { display:none; }
+summary::before { content:""; flex:none; width:6px; height:6px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); transition:transform .15s; }
+details[open] > summary::before { transform:rotate(45deg); }
+details:not([open]), .effort:not([open]), .exercise-swap:not([open]) { min-height:0; padding:12px 16px; }
+.diary-details summary { padding:0; }
+.diary-details[open] summary { padding:12px 0; }
+button::before, button::after, .calendar button::before, .calendar button::after { content:none; }
+.calendar .outside-month { color:var(--muted); opacity:.45; }
+.calendar .selected { background:var(--ink); color:var(--bg); opacity:1; }
+progress { display:block; width:100%; height:8px; border:0; border-radius:4px; overflow:hidden; appearance:none; background:var(--field); accent-color:var(--accent); }
+progress::-webkit-progress-bar { background:var(--field); border-radius:4px; }
+progress::-webkit-progress-value { background:var(--accent); border-radius:4px; }
+progress::-moz-progress-bar { background:var(--accent); border-radius:4px; }
+.segmented { display:flex; gap:4px; margin:8px 0; }
+.segmented button { flex:1; min-width:0; padding:10px 6px; margin:0; background:transparent; }
+.segmented button[aria-pressed="true"], .diary-switch button[aria-pressed="true"] { background:var(--accent); color:#111; }
+.workout-fields .set, .workout-fields .setheading { display:grid; grid-template-columns:32px minmax(0,1fr) minmax(0,1fr) 44px; gap:8px; align-items:center; padding:8px 0; margin-left:0; margin-right:0; border:0; }
+.workout-fields .set.current { outline:1px solid var(--ink); outline-offset:3px; border-radius:6px; }
+.workout-fields .set > button { width:32px; min-width:0; padding:4px 0; margin:0; }
+.workout-fields .set > input[type="checkbox"] { width:24px; height:24px; min-width:0; margin:0; justify-self:center; }
+.workout-fields .set .numeric { display:grid; grid-template-columns:1fr 1fr; min-width:0; gap:4px; }
+.workout-fields .set .numeric input { grid-column:1/-1; grid-row:1; width:100%; min-width:0; min-height:44px; font-size:20px; margin:0; padding:8px 4px; text-align:center; }
+.workout-fields .set .numeric button { width:100%; min-width:0; min-height:36px; margin:0; padding:4px; }
+.focus-workout .setheading { display:none; }
+.focus-workout .set { grid-template-columns:32px minmax(0,1fr) minmax(0,1fr); }
+.timer strong { font-size:24px; font-variant-numeric:tabular-nums; }
+.date-field { display:block; position:relative; min-width:0; }
+.date-field > input { color:transparent; }
+.date-field > input::-webkit-datetime-edit { opacity:0; }
+.date-field > span { position:absolute; left:13px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:16px; color:var(--ink); }
+.meal-nutrients { font-size:13px; }
+.meal-nutrients small { display:block; color:var(--muted); margin-top:4px; }
+.focus-workout .set > .focus-complete { grid-column:1/-1; width:100%; min-height:48px; }
+.overview h1 { font-size:28px; font-weight:650; letter-spacing:normal; }
+.focus-workout .set.current .numeric { display:grid; }
+details { border-radius:14px; }
+.exercise-swap > summary, .effort > summary, .diary-details > summary { min-height:20px; }
+.workout-fields > details > button { margin:4px 8px 4px 0; }

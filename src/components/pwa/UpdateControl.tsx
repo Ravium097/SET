@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export const RELEASE = "BASE. 3.0 · Rebranding 06";
+export const RELEASE = "BASE. 3.0 · Klartext 07";
 let registrationPromise: Promise<ServiceWorkerRegistration> | undefined;
 function registration() {
   return (registrationPromise ??= navigator.serviceWorker

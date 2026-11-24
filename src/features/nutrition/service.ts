@@ -25,6 +25,7 @@ export async function searchFoods(query: string): Promise<Food[]> {
         id: String(p.code),
         name: p.product_name,
         kind: "cache",
+        ...Object.fromEntries([["protein","proteins_100g"],["carbs","carbohydrates_100g"],["fat","fat_100g"]].filter(([,key])=>Number.isFinite(p.nutriments?.[key]) && p.nutriments[key]>=0).map(([key,source])=>[key,p.nutriments[source]])),
         notes: "Open Food Facts · pro 100 g/ml",
         ...(Number.isFinite(p.nutriments?.["energy-kcal_100g"])
           ? { kcal: p.nutriments["energy-kcal_100g"] }
