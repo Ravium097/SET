@@ -1,3 +1,5 @@
+import { ActionMenu } from "./components/ui/ActionMenu";
+import { PeriodFilter } from "./components/ui/PeriodFilter";
 import {DateField} from "./components/ui/DateField";
 import { NutritionPreferencesForm, MealReminders } from "./features/nutrition/Preferences";
 import { Nutrition, Modules, DailyOverview } from "./features/nutrition/Nutrition";
@@ -18,6 +20,8 @@ import {
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Home,
+  Play,
+
   Dumbbell,
   CalendarDays,
   Utensils,
@@ -38,6 +42,7 @@ import {
 } from "date-fns";
 import { de } from "date-fns/locale";
 import {
+  CartesianGrid,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -72,6 +77,7 @@ import { movements, movementOf } from "./features/swap";
 import { LiveSummary } from "./features/LiveSummary";
 import { EffortFields } from "./features/EffortFields";
 import "./style.css";
+import "./styles/performance.css";
 import { t, germanError } from "./i18n/de";
 import { RestDuration } from "./components/settings/RestDuration";
 import { Onboarding } from "./components/onboarding/Onboarding";
@@ -91,6 +97,18 @@ const error = (e: unknown) => alert(germanError(e));
 function App() {
   const { pathname } = useLocation();
   useEffect(() => { document.querySelector("main")?.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const resize = () => {
+      const editing = document.activeElement?.matches('input, textarea, select');
+      document.documentElement.style.setProperty("--app-height", `${editing && viewport ? viewport.height : window.innerHeight}px`);
+      if (editing) document.activeElement?.scrollIntoView({block:"nearest"});
+    };
+    viewport?.addEventListener("resize", resize);
+    window.addEventListener("focusout", resize);
+    resize();
+    return () => { viewport?.removeEventListener("resize", resize); window.removeEventListener("focusout", resize); };
+  }, []);
   const settings = useLiveQuery(() => db.settings.get("settings")) ?? defaults;
   useTheme(settings.theme);
   const [now, tick] = useState(Date.now());
@@ -105,7 +123,7 @@ function App() {
       : null);
   return (
     <>
-      <main className={["/", "/training", "/history", "/stats"].includes(pathname) ? "overview" : ""}>
+      <main className={["/", "/training", "/history", "/stats", "/progress"].includes(pathname) ? "overview" : ""}>
         <header>
           <Link to="/" className="logo">
             BASE.
@@ -121,8 +139,10 @@ function App() {
           <Route path="/training" element={<Training />} />
           <Route path="/workout/:wid" element={<Editor />} />
           <Route path="/library" element={<Library />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/stats" element={<Stats />} />
+          <Route path="/history" element={<Progress section="history" />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/progress/muscles" element={<Progress section="muscles" />} />
+          <Route path="/stats" element={<Progress />} />
           <Route path="/nutrition" element={<Nutrition />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/import" element={<Navigate to="/training" replace />} />
@@ -174,13 +194,12 @@ function App() {
         {[
           [Home, "/", "Start"],
           [Dumbbell, "/training", "Training"],
-          [CalendarDays, "/history", "Verlauf"],
-          [ChartNoAxesCombined, "/stats", "Statistik"],
+          [ChartNoAxesCombined, "/progress", "Fortschritt"],
           ...(settings.nutrition || settings.hydration ? [[Utensils, "/nutrition", "Tagebuch"]] : []),
         ].map(([Icon, to, label]) => {
           const C = Icon as typeof Home;
           return (
-            <NavLink key={String(to)} to={String(to)}>
+            <NavLink key={String(to)} to={String(to)} className={String(to) === "/progress" && ["/history", "/stats"].includes(pathname) ? "active" : undefined}>
               <C size={21} />
               <span>{String(label)}</span>
             </NavLink>
@@ -193,72 +212,45 @@ function App() {
 }
 function Dashboard() {
   const all = useLiveQuery(() => db.workouts.toArray());
+  const settings = useLiveQuery(() => db.settings.get("settings"));
+  const entries = useLiveQuery(() => db.nutrition.where("date").equals(day()).toArray()) ?? [];
   const [selected, select] = useState(day());
-  const [range, setRange] = useState("30");
-  const [exercise, setExercise] = useState("");
   const done = (all ?? []).filter(w => w.status === "completed").sort((a,b) => b.date.localeCompare(a.date));
   const active = all?.find(w => w.status === "active");
-  const today = new Date();
-  const monday = startOfWeek(today, { weekStartsOn: 1 });
-  const days = Array.from({length: 7}, (_, i) => {
-    const d = new Date(monday); d.setDate(d.getDate() + i); return d;
-  });
+  const completed = done.filter(w => w.date === day());
+  const today = new Date(), monday = startOfWeek(today, { weekStartsOn: 1 });
+  const days = Array.from({length: 7}, (_, i) => { const d = new Date(monday); d.setDate(d.getDate()+i); return d; });
   const week = done.filter(w => w.date >= day(monday) && w.date <= day());
-  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - Number(range) + 1);
-  const filtered = done.filter(w => (range === "all" || w.date >= day(cutoff)) && w.date <= day());
-  const names = [...new Set(done.flatMap(w => w.exercises.map(e => e.name)))].sort();
-  const points = [...filtered].reverse().filter(w => !exercise || w.exercises.some(e => e.name === exercise)).map(w => ({
-    date: w.date,
-    value: volume({...w, exercises: w.exercises.filter(e => !exercise || e.name === exercise)}),
-  }));
-  const chart = Array.from(points.reduce((map, p) => map.set(p.date, (map.get(p.date) ?? 0) + p.value), new Map<string, number>()), ([date, value]) => ({date, value}));
-  if (!all) return <p role="status">Dashboard wird geladen …</p>;
+  if (!all) return <p role="status">Tagesübersicht wird geladen …</p>;
   return <div className="dashboard">
     <p className="eyebrow">{format(today, "EEEE, d. MMMM", {locale: de})}</p>
-    <h1>{active ? active.name : "Training heute"}</h1>
+    <h1>Dein Tag. Deine Basis.</h1>
     {!all.length && <Onboarding/>}
     <article className="dashboard-start">
-      <h2>{active ? "Aktives Training" : "Kein aktives Training"}</h2>
-      <p>{active ? `${active.exercises.length} Übungen` : "Vorlage oder freies Training wählen."}</p>
-      <Link className="primary action" to={active ? `/workout/${active.id}` : "/training"}><Dumbbell/>{active ? "Training fortsetzen" : "Training auswählen"}<ArrowRight/></Link>
+      <small>{active ? "TRAINING LÄUFT" : completed.length ? "HEUTE ABGESCHLOSSEN" : "BEREIT, WENN DU ES BIST"}</small>
+      <h2>{active?.name ?? completed[0]?.name ?? "Zeit für dein Training"}</h2>
+      <p>{active ? `${active.exercises.length} Übungen · jederzeit fortsetzen` : completed.length ? `${completed.length} ${completed.length === 1 ? "Training" : "Trainings"} · ${completed.reduce((n,w)=>n+count(w),0)} Sätze · ${fmt(completed.reduce((n,w)=>n+volume(w),0))} kg` : "Wähle deine Vorlage oder trainiere frei."}</p>
+      <Link className="primary action" to={active ? `/workout/${active.id}` : completed.length ? `/workout/${completed[0].id}` : "/training"}><Play size={18}/>{active ? "Training fortsetzen" : completed.length ? "Training ansehen" : "Training starten"}</Link>
     </article>
     <section aria-labelledby="week-heading">
-      <div className="row"><h2 id="week-heading">Deine Woche</h2><Link to="/history">Verlauf →</Link></div>
-      <p>{week.length} abgeschlossene {week.length === 1 ? "Einheit" : "Einheiten"} · {week.reduce((n,w) => n + count(w), 0)} Sätze</p>
-      <div className="dashboard-week">{days.map(d => {
-        const key = day(d), n = done.filter(w => w.date === key).length;
-        return <button key={key} aria-pressed={selected === key} aria-label={`${format(d, "EEEE, d. MMMM", {locale: de})}: ${n} Workouts`} onClick={() => select(key)}><small>{format(d, "EEEEEE", {locale: de})}</small><strong>{d.getDate()}</strong><span>{n ? "●" : "–"}</span></button>;
-      })}</div>
-      <div aria-live="polite"><p>{format(new Date(selected + "T12:00:00"), "EEEE, d. MMMM", {locale: de})}</p>
-      {done.filter(w => w.date === selected).map(w => <WorkoutCard key={w.id} w={w}/>)}
-      {!done.some(w => w.date === selected) && <p className="dashboard-note">Kein Training.</p>}</div>
+      <div className="row"><h2 id="week-heading">Deine Woche</h2><Link to="/history" aria-label="Trainingskalender öffnen"><CalendarDays size={20}/></Link></div>
+      <div className="dashboard-week">{days.map(d => { const key=day(d), n=done.filter(w=>w.date===key).length; return <button key={key} aria-pressed={selected===key} aria-label={`${format(d,"EEEE, d. MMMM",{locale:de})}: ${n} Trainings`} onClick={()=>select(key)}><small>{format(d,"EEEEEE",{locale:de})}</small><strong>{d.getDate()}</strong><span>{n ? "●" : "·"}</span></button>; })}</div>
+      <p className="dashboard-note" aria-live="polite">{format(new Date(selected+"T12:00:00"),"EEEE",{locale:de})} · {done.filter(w=>w.date===selected).length} abgeschlossene Trainings</p>
     </section>
-    <section aria-labelledby="progress-heading">
-      <div className="row"><h2 id="progress-heading">Dein Fortschritt</h2><Link to="/stats">Details →</Link></div>
-      <div className="dashboard-filters">
-        <div><span>Zeitraum</span><div className="segmented" role="group" aria-label="Zeitraum">{[["7","7T"],["30","30T"],["90","90T"],["all","Alle"]].map(([value,label])=><button key={value} aria-pressed={range===value} onClick={()=>setRange(value)}>{label}</button>)}</div></div>
-        <label>Übung<select value={exercise} onChange={e => setExercise(e.target.value)}><option value="">Alle Übungen</option>{names.map(n => <option key={n}>{n}</option>)}</select></label>
-      </div>
-      <article>
-        <small>TRAININGSVOLUMEN · GEWICHT × WIEDERHOLUNGEN</small>
-        <h2>{fmt(chart.reduce((n,p) => n + p.value, 0))} kg</h2>
-        {chart.length ? <><div style={{height: 220}}><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} accessibilityLayer><XAxis dataKey="date" tickFormatter={d => format(new Date(d + "T12:00:00"), "dd.MM.")}/><YAxis width={50}/><Tooltip formatter={v => [`${fmt(Number(v))} kg`, "Volumen"]}/><Bar dataKey="value" fill="var(--ink)" radius={[5,5,0,0]}/></BarChart></ResponsiveContainer></div><details><summary>Werte als Liste anzeigen</summary>{chart.map(p => <p key={p.date}>{format(new Date(p.date + "T12:00:00"), "dd.MM.yyyy")}: {fmt(p.value)} kg</p>)}</details></> : <p>Noch keine abgeschlossenen Workouts für diese Auswahl.</p>}
-        <small>Nur abgeschlossene Sätze zählen. Körpergewichtsübungen mit 0 kg ergeben kein Gewichtsvolumen.</small>
-      </article>
+    <section><div className="row"><h2>Diese Woche</h2><Link to="/progress">Fortschritt</Link></div>
+      <div className="metrics"><article><b>{week.length}</b><small>Trainings</small></article><article><b>{week.reduce((n,w)=>n+count(w),0)}</b><small>Sätze</small></article><article><b>{fmt(week.reduce((n,w)=>n+volume(w),0))}</b><small>Volumen · kg</small></article></div>
     </section>
-    <section aria-labelledby="recent-heading"><div className="row"><h2 id="recent-heading">Letzte Workouts</h2><Link to="/history">Alle →</Link></div>
-      {done.slice(0,3).map(w => <details key={w.id}><summary><strong>{w.name}</strong><br/><small>{format(new Date(w.date + "T12:00:00"), "dd.MM.yyyy")} · {count(w)} Sätze{w.duration !== null ? ` · ${Math.round(w.duration / 60)} min` : ""}</small></summary>
-      {w.exercises.map(e => <p key={e.id}>{e.name} · {e.sets.filter(isCompletedWork).length} Sätze</p>)}<Link className="action" to={`/workout/${w.id}`}>Workout öffnen <ArrowRight size={16}/></Link></details>)}
-      {!done.length && <article className="empty"><Dumbbell size={36}/><h3>Keine Trainings</h3><p>Abgeschlossene Trainings erscheinen hier.</p></article>}
-    </section>
-    <DailyOverview/>
+    {(settings?.nutrition || settings?.hydration) && <Link to="/nutrition" className="tile diary-preview"><span><Utensils size={20}/> Tagebuch<small>{entries.filter(e=>e.meal === "Getränke" ? settings.hydration : settings.nutrition).length} Einträge heute · Notizen & Regeneration</small></span><Plus size={20}/></Link>}
   </div>;
+}
+function Progress({section="overview"}:{section?:"overview"|"history"|"muscles"}) {
+  return <><h1>Fortschritt</h1><nav className="progress-tabs" aria-label="Fortschrittsbereiche">{[["overview","/progress","Übersicht"],["history","/history","Verlauf"],["muscles","/progress/muscles","Muskeln"]].map(([key,url,label])=><Link key={key} to={url} aria-current={section===key ? "page" : undefined}>{label}</Link>)}</nav>{section === "history" ? <History/> : section === "muscles" ? <MuscleMap/> : <Stats/>}</>;
 }
 function WorkoutCard({ w }: { w: Workout }) {
   return (
     <Link to={`/workout/${w.id}`} aria-label={`${w.name} · ${w.date}`}>
       <article>
-        <small>{w.date}</small>
+
         <h3>{w.name}</h3>
         <p>
           {w.exercises.length} Übungen · {count(w)} Sätze · {fmt(volume(w))} kg
@@ -293,12 +285,11 @@ function Training() {
       {ws
         .filter((w) => w.status === "template")
         .map((w) => (
-          <article key={w.id}>
-            <h3>{w.name}</h3>
+          <article key={w.id} className="template-card">
+            <div className="template-title"><h3>{w.name}</h3>
+            <button className="primary icon-button" aria-label={`${w.name} starten`} onClick={() => start(w).catch(error)}><Play size={18}/></button></div>
             <p>{w.exercises.length} Übungen</p>
-            <button className="primary" onClick={() => start(w).catch(error)}>
-              Starten
-            </button>{" "}
+            <ActionMenu label={`Optionen für ${w.name}`}>
             <Link className="button" to={`/workout/${w.id}`}>
               Bearbeiten
             </Link>
@@ -315,6 +306,8 @@ function Training() {
             >
               Duplizieren
             </button>
+            <button onClick={() => {if(confirm(`Vorlage „${w.name}“ löschen?`)) db.workouts.delete(w.id).catch(error);}}>Löschen</button>
+            </ActionMenu>
           </article>
         ))}
       <button
@@ -867,7 +860,7 @@ function History() {
   });
   return (
     <>
-      <h1>Verlauf</h1>
+
       <article>
         <div className="row">
           <button onClick={() => Month(addMonths(month, -1))}>←</button>
@@ -954,16 +947,11 @@ function Stats() {
       ? [{ date: w.date, weight: Math.max(...weights) }]
       : [];
   });
-  if (!filtered.length) return <><h1>Dein Fortschritt</h1><MuscleMap/><select aria-label="Zeitraum" value={range} onChange={e=>R(e.target.value)}><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="365">1 Jahr</option><option value="all">Gesamt</option></select><div className="metrics"><article><b>0</b><small>Workouts</small></article><article><b>0</b><small>Volumen · kg</small></article></div><article className="empty"><ChartNoAxesCombined size={32}/><h2>Noch keine Trainingsdaten</h2><p>Volumen, Häufigkeit, Kraftentwicklung und Rekorde erscheinen nach deinem ersten abgeschlossenen Workout im gewählten Zeitraum.</p><Link className="button primary" to="/training">Zum Training</Link></article></>;
+  if (!filtered.length) return <><PeriodFilter value={range} onChange={R}/><div className="metrics"><article><b>0</b><small>Workouts</small></article><article><b>0</b><small>Volumen · kg</small></article></div><article className="empty"><ChartNoAxesCombined size={32}/><h2>Noch keine Trainingsdaten</h2><p>Volumen, Häufigkeit, Kraftentwicklung und Rekorde erscheinen nach deinem ersten abgeschlossenen Workout im gewählten Zeitraum.</p><Link className="button primary" to="/training">Zum Training</Link></article></>;
   return (
     <>
-      <h1>Dein Fortschritt</h1><MuscleMap/>
-      <select value={range} onChange={(e) => R(e.target.value)}>
-        <option value="30">30 Tage</option>
-        <option value="90">90 Tage</option>
-        <option value="365">1 Jahr</option>
-        <option value="all">Gesamt</option>
-      </select>
+
+      <PeriodFilter value={range} onChange={R}/>
       <div className="metrics">
         <article>
           <b>{filtered.length}</b>
@@ -986,8 +974,8 @@ function Stats() {
           {groups.size ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={[...groups.values()]}>
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                <YAxis width={45} />
+                <CartesianGrid vertical={false} stroke="var(--line)"/><XAxis dataKey="date" tickFormatter={d=>format(new Date(d+"T12:00:00"),"dd.MM.")} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis width={52} allowDecimals={key !== "workouts"} tickFormatter={fmt} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{background:"var(--surface)",borderColor:"var(--line)",color:"var(--ink)"}} />
                 <Bar name={key === "volume" ? "Trainingsvolumen (kg)" : "Trainings"} dataKey={key} fill="var(--ink)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -1007,10 +995,10 @@ function Stats() {
         {strength.length ? (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={strength}>
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <CartesianGrid vertical={false} stroke="var(--line)"/><XAxis dataKey="date" tickFormatter={d=>format(new Date(d+"T12:00:00"),"dd.MM.")} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis />
               <Tooltip contentStyle={{background:"var(--surface)",borderColor:"var(--line)",color:"var(--ink)"}} />
-              <Line name="Gewicht (kg)" dataKey="weight" stroke="var(--ink)" />
+              <Line type="linear" name="Gewicht (kg)" dataKey="weight" stroke="var(--ink)" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -1137,7 +1125,7 @@ function Settings() {
         </button>
       </article>
       <p>
-        BASE. · Ansicht
+        BASE. · Minimal Performance
         <br />
         Auf dem iPhone: Safari → Teilen → Zum Home-Bildschirm.
       </p>

@@ -10,9 +10,9 @@ export function useTheme(theme:Settings["theme"]) {
       document.documentElement.dataset.theme = selected;
       document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.setAttribute("content", selected === "midnight" ? "black" : "default");
       try { localStorage.setItem("set-theme-startup", theme ?? selected); } catch { /* IndexedDB remains authoritative. */ }
-      document.documentElement.style.backgroundColor = {swiss:"#f7f7f7",midnight:"#121416",stone:"#f3f0e9",forest:"#eef3ed",glass:"#f5f5f7"}[selected];
+      document.documentElement.style.backgroundColor = {swiss:"#F5F5F7",midnight:"#101113",stone:"#f3f0e9",forest:"#eef3ed",glass:"#f5f5f7"}[selected];
       document.documentElement.style.colorScheme = selected === "midnight" ? "dark" : "light";
-      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", {swiss:"#f7f7f7",midnight:"#121416",stone:"#f3f0e9",forest:"#eef3ed",glass:"#f5f5f7"}[selected]);
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", {swiss:"#F5F5F7",midnight:"#101113",stone:"#f3f0e9",forest:"#eef3ed",glass:"#f5f5f7"}[selected]);
     };
     apply(); media.addEventListener("change",apply); return ()=>media.removeEventListener("change",apply);
   },[theme]);
