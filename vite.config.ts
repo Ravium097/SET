@@ -19,9 +19,9 @@ export default defineConfig({
         background_color: "#101113",
         icons: [
           { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-          { src: "/icons/192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icons/base-layers-192.png", sizes: "192x192", type: "image/png" },
           {
-            src: "/icons/512.png",
+            src: "/icons/base-layers-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
