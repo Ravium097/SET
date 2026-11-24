@@ -40,11 +40,45 @@ export const workoutSchema = z.object({
   status: z.enum(["active", "completed", "template"]),
   exercises: z.array(itemSchema),
 });
+export const nutritionSchema = z.object({
+  id: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  name: z.string().min(1),
+  meal: z.enum([
+    "Frühstück",
+    "Mittagessen",
+    "Abendessen",
+    "Snacks",
+    "Getränke",
+  ]),
+  amount: z.number().positive().finite(),
+  unit: z.enum(["g", "ml", "Portion"]),
+  notes: z.string(),
+  photo: z
+    .string()
+    .regex(/^data:image\/(jpeg|png|webp);base64,/)
+    .optional(),
+  kcal: z.number().nonnegative().finite().optional(),
+});
+export const foodSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  kind: z.enum(["food", "recipe", "drink", "cache"]),
+  notes: z.string(),
+  kcal: z.number().nonnegative().finite().optional(),
+});
+export type NutritionEntry = z.infer<typeof nutritionSchema>;
+export type Food = z.infer<typeof foodSchema>;
 export const settingsSchema = z.object({
   id: z.literal("settings"),
+  nutrition: z.boolean().optional(),
+  hydration: z.boolean().optional(),
   rest: z.number().int().min(1).max(3600),
   auto: z.boolean(),
-  theme: z.enum(["swiss", "midnight", "stone", "forest", "glass", "system"]).optional(),
+  theme: z
+    .enum(["swiss", "midnight", "stone", "forest", "glass", "system"])
+    .optional(),
   timerEnd: z.number().nullable(),
   paused: z.number().nullable(),
 });
@@ -54,6 +88,9 @@ export type Item = z.infer<typeof itemSchema>;
 export type SetRow = z.infer<typeof setSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export const db = new Dexie("SET") as Dexie & {
+  nutrition: EntityTable<NutritionEntry, "id">;
+  foods: EntityTable<Food, "id">;
+  dayNotes: EntityTable<{ id: string; notes: string }, "id">;
   exercises: EntityTable<Exercise, "id">;
   workouts: EntityTable<Workout, "id">;
   settings: EntityTable<Settings, "id">;
@@ -64,17 +101,39 @@ db.version(1).stores({
   settings: "id",
 });
 // Additive upgrade: no records or IDs are removed. Legacy set types stay implicit work.
-db.version(2).stores({exercises:"id,name,muscle,equipment",workouts:"id,status,date",settings:"id"}).upgrade(async tx => {
-  const library = await tx.table("exercises").toArray() as Exercise[];
-  await tx.table("workouts").toCollection().modify((w: Workout) => {
-    w.exercises = snapshotItems(w.exercises, library);
+db.version(2)
+  .stores({
+    exercises: "id,name,muscle,equipment",
+    workouts: "id,status,date",
+    settings: "id",
+  })
+  .upgrade(async (tx) => {
+    const library = (await tx.table("exercises").toArray()) as Exercise[];
+    await tx
+      .table("workouts")
+      .toCollection()
+      .modify((w: Workout) => {
+        w.exercises = snapshotItems(w.exercises, library);
+      });
   });
+db.version(3).stores({
+  nutrition: "id,date,meal",
+  foods: "id,name,kind",
+  dayNotes: "id",
 });
 export function snapshotItems(items: Item[], library: Exercise[]): Item[] {
-  return items.map(item => {
-    const exercise = library.find(e => e.id === item.exerciseId);
-    return exercise ? {...item, muscle:item.muscle ?? exercise.muscle, equipment:item.equipment ?? exercise.equipment,
-      ...(item.movement || exercise.movement ? {movement:item.movement ?? exercise.movement} : {})} : item;
+  return items.map((item) => {
+    const exercise = library.find((e) => e.id === item.exerciseId);
+    return exercise
+      ? {
+          ...item,
+          muscle: item.muscle ?? exercise.muscle,
+          equipment: item.equipment ?? exercise.equipment,
+          ...(item.movement || exercise.movement
+            ? { movement: item.movement ?? exercise.movement }
+            : {}),
+        }
+      : item;
   });
 }
 export const defaults: Settings = {
@@ -161,9 +220,12 @@ export const volume = (w: Workout) =>
 export const count = (w: Workout) =>
   w.exercises.flatMap((e) => e.sets).filter(isCompletedWork).length;
 export const backupSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.union([z.literal(1), z.literal(2)]),
   appVersion: z.string(),
   exportedAt: z.string(),
+  nutrition: z.array(nutritionSchema).optional(),
+  foods: z.array(foodSchema).optional(),
+  dayNotes: z.array(z.object({ id: z.string(), notes: z.string() })).optional(),
   exercises: z.array(exerciseSchema),
   workouts: z.array(workoutSchema),
   settings: settingsSchema,
@@ -171,12 +233,20 @@ export const backupSchema = z.object({
 export async function exportData() {
   return db.transaction(
     "r",
-    db.exercises,
-    db.workouts,
-    db.settings,
+    [
+      db.exercises,
+      db.workouts,
+      db.settings,
+      db.nutrition,
+      db.foods,
+      db.dayNotes,
+    ],
     async () => ({
-      schemaVersion: 1 as const,
-      appVersion: "1.0.0",
+      schemaVersion: 2 as const,
+      appVersion: "3.0.0",
+      nutrition: await db.nutrition.toArray(),
+      foods: await db.foods.toArray(),
+      dayNotes: await db.dayNotes.toArray(),
       exportedAt: new Date().toISOString(),
       exercises: await db.exercises.toArray(),
       workouts: await db.workouts.toArray(),
@@ -186,22 +256,47 @@ export async function exportData() {
 }
 export async function restore(raw: unknown) {
   const b = backupSchema.parse(raw);
-  for (const rows of [b.exercises, b.workouts])
+  if (b.schemaVersion === 2 && (!b.nutrition || !b.foods || !b.dayNotes)) throw Error("Unvollständiges SET-3-Backup");
+  for (const rows of [
+    b.exercises,
+    b.workouts,
+    b.nutrition ?? [],
+    b.foods ?? [],
+    b.dayNotes ?? [],
+  ])
     if (new Set(rows.map((x) => x.id)).size !== rows.length)
       throw Error("Doppelte IDs");
   if (b.workouts.filter((w) => w.status === "active").length > 1)
     throw Error("Mehrere aktive Workouts");
   await db.transaction(
     "rw",
-    db.exercises,
-    db.workouts,
-    db.settings,
+    [
+      db.exercises,
+      db.workouts,
+      db.settings,
+      db.nutrition,
+      db.foods,
+      db.dayNotes,
+    ],
     async () => {
+      if (b.schemaVersion === 2) {
+        await db.nutrition.clear();
+        await db.foods.clear();
+        await db.dayNotes.clear();
+        await db.nutrition.bulkPut(b.nutrition ?? []);
+        await db.foods.bulkPut(b.foods ?? []);
+        await db.dayNotes.bulkPut(b.dayNotes ?? []);
+      }
       await db.exercises.clear();
       await db.workouts.clear();
       await db.settings.clear();
       await db.exercises.bulkPut(b.exercises);
-      await db.workouts.bulkPut(b.workouts.map(w => ({...w,exercises:snapshotItems(w.exercises,b.exercises)})));
+      await db.workouts.bulkPut(
+        b.workouts.map((w) => ({
+          ...w,
+          exercises: snapshotItems(w.exercises, b.exercises),
+        })),
+      );
       await db.settings.put({ ...b.settings, timerEnd: null, paused: null });
     },
   );

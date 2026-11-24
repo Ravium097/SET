@@ -1,3 +1,4 @@
+import { Nutrition, Modules, DailyOverview } from "./features/nutrition/Nutrition";
 import { StartupBoundary } from "./components/pwa/StartupBoundary";
 import React, { useState, useEffect, useId } from "react";
 import { createRoot } from "react-dom/client";
@@ -118,6 +119,7 @@ function App() {
           <Route path="/library" element={<Library />} />
           <Route path="/history" element={<History />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/nutrition" element={<Nutrition />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/import" element={<Navigate to="/training" replace />} />
         </Routes>
@@ -170,6 +172,7 @@ function App() {
           [Dumbbell, "/training", "Training"],
           [CalendarDays, "/history", "Verlauf"],
           [ChartNoAxesCombined, "/stats", "Statistik"],
+          ...(settings.nutrition || settings.hydration ? [[CalendarDays, "/nutrition", "Tagebuch"]] : []),
         ].map(([Icon, to, label]) => {
           const C = Icon as typeof Home;
           return (
@@ -207,6 +210,7 @@ function Dashboard() {
   const chart = Array.from(points.reduce((map, p) => map.set(p.date, (map.get(p.date) ?? 0) + p.value), new Map<string, number>()), ([date, value]) => ({date, value}));
   if (!all) return <p role="status">Dashboard wird geladen …</p>;
   return <div className="dashboard">
+    <DailyOverview/>
     <p className="eyebrow">{format(today, "EEEE, d. MMMM", {locale: de})}</p>
     <h1>Dein Training.<br/><span>Alles im Blick.</span></h1>
     {!all.length && <Onboarding/>}
@@ -1034,6 +1038,7 @@ function Settings() {
   return (
     <>
       <h1>Einstellungen</h1>
+      <Modules settings={s}/>
       <ThemeStudio settings={s}/>
       <article>
         <h2>Pausentimer</h2>
@@ -1084,12 +1089,12 @@ function Settings() {
               try {
                 const f = e.target.files?.[0];
                 if (!f) return;
-                if (f.size > 20 * 1024 * 1024)
+                if (f.size > 200 * 1024 * 1024)
                   throw Error("Backup ist zu groß");
                 const b = backupSchema.parse(JSON.parse(await f.text()));
                 if (
                   confirm(
-                    `${b.workouts.length} Trainings und ${b.exercises.length} Übungen wiederherstellen? Alle vorhandenen Daten werden ersetzt.`,
+                    `${b.workouts.length} Trainings und ${b.exercises.length} Übungen wiederherstellen? ${b.schemaVersion === 1 ? "Trainings und Einstellungen werden ersetzt; Nutrition-Daten bleiben erhalten." : "Alle vorhandenen Daten einschließlich Nutrition werden ersetzt."}`,
                   )
                 ) {
                   await restore(b);
@@ -1111,18 +1116,17 @@ function Settings() {
           onClick={async () => {
             if (
               confirm(
-                "Alle Trainingsdaten, Übungen und Einstellungen unwiderruflich löschen?",
+                "Alle Trainingsdaten, Übungen, Ernährungseinträge, Fotos und Einstellungen unwiderruflich löschen?",
               )
             ) {
               await db.transaction(
                 "rw",
-                db.workouts,
-                db.exercises,
-                db.settings,
+                [db.workouts, db.exercises, db.settings, db.nutrition, db.foods, db.dayNotes],
                 async () => {
                   await db.workouts.clear();
                   await db.exercises.clear();
                   await db.settings.clear();
+                  await db.nutrition.clear(); await db.foods.clear(); await db.dayNotes.clear();
                 },
               );
               await init();
