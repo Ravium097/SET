@@ -45,13 +45,7 @@ export const nutritionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
   name: z.string().min(1),
-  meal: z.enum([
-    "Frühstück",
-    "Mittagessen",
-    "Abendessen",
-    "Snacks",
-    "Getränke",
-  ]),
+  meal: z.string().trim().min(1).max(60),
   amount: z.number().positive().finite(),
   unit: z.enum(["g", "ml", "Portion"]),
   notes: z.string(),
@@ -70,10 +64,44 @@ export const foodSchema = z.object({
 });
 export type NutritionEntry = z.infer<typeof nutritionSchema>;
 export type Food = z.infer<typeof foodSchema>;
+export const nutritionPreferencesSchema = z.object({
+  showNutrients: z.boolean(),
+  categories: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(60)
+        .refine((v) => v !== "Getränke", "Getränke separat konfigurieren"),
+    )
+    .min(1)
+    .max(12)
+    .refine(
+      (v) => new Set(v.map((x) => x.toLocaleLowerCase())).size === v.length,
+      "Kategorien müssen eindeutig sein",
+    ),
+  reminders: z.boolean(),
+  reminderTimes: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)).max(12),
+  drinkAmount: z.number().int().min(1).max(5000),
+  drinkName: z.string().trim().min(1).max(60),
+  showDrinkTotal: z.boolean(),
+});
+export type NutritionPreferences = z.infer<typeof nutritionPreferencesSchema>;
+export const nutritionDefaults: NutritionPreferences = {
+  showNutrients: true,
+  categories: ["Frühstück", "Mittagessen", "Abendessen", "Snacks"],
+  reminders: false,
+  reminderTimes: ["08:00", "12:00", "18:00"],
+  drinkAmount: 250,
+  drinkName: "Wasser",
+  showDrinkTotal: true,
+};
 export const settingsSchema = z.object({
   id: z.literal("settings"),
   nutrition: z.boolean().optional(),
   hydration: z.boolean().optional(),
+  nutritionPreferences: nutritionPreferencesSchema.optional(),
   rest: z.number().int().min(1).max(3600),
   auto: z.boolean(),
   theme: z
@@ -256,7 +284,8 @@ export async function exportData() {
 }
 export async function restore(raw: unknown) {
   const b = backupSchema.parse(raw);
-  if (b.schemaVersion === 2 && (!b.nutrition || !b.foods || !b.dayNotes)) throw Error("Unvollständiges SET-3-Backup");
+  if (b.schemaVersion === 2 && (!b.nutrition || !b.foods || !b.dayNotes))
+    throw Error("Unvollständiges SET-3-Backup");
   for (const rows of [
     b.exercises,
     b.workouts,

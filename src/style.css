@@ -621,3 +621,9 @@ html, body { background-color:var(--bg); }
 .diary-details { margin:24px 0; border-top:1px solid var(--line); }
 .diary-details summary { cursor:pointer; padding:18px 0; font-weight:600; }
 .diary-editor { scroll-margin-top:16px; }
+.nutrition-preferences details { border-top:1px solid var(--line); margin:16px 0; }
+.nutrition-preferences summary { padding:16px 0; cursor:pointer; font-weight:600; }
+.nutrition-preferences textarea { min-height:140px; }
+.diary-settings-link { display:inline-block; margin-bottom:20px; color:var(--muted); }
+.meal-reminder { padding:20px; border:1px solid var(--ink); border-radius:16px; margin-bottom:24px; background:var(--surface); }
+.meal-reminder a { text-decoration:underline; margin-right:16px; }

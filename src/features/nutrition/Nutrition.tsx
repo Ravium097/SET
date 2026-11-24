@@ -1,3 +1,4 @@
+import { nutritionDefaults } from "../../data";
 import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Link, Navigate } from "react-router-dom";
@@ -24,7 +25,7 @@ export function Modules({ settings }: { settings: Settings }) {
             checked={!!settings[key]}
             onChange={(e) =>
               db.settings
-                .update("settings", { [key]: e.target.checked })
+                .update("settings", key === "nutrition" ? {nutrition:e.target.checked} : {hydration:e.target.checked})
                 .catch(() =>
                   alert("Einstellung konnte nicht gespeichert werden."),
                 )
@@ -146,6 +147,7 @@ function Scanner({
 }
 export function Nutrition() {
   const settings = useLiveQuery(() => db.settings.get("settings"));
+  const preferences = settings?.nutritionPreferences ?? nutritionDefaults;
   const [date, setDate] = useState(localDay());
   const [view, setView] = useState("Tag");
   const editor = useRef<HTMLElement>(null);
@@ -160,15 +162,18 @@ export function Nutrition() {
     id: id(),
     date,
     time: new Date().toTimeString().slice(0, 5),
-    name: "",
-    meal: settings?.nutrition ? "Frühstück" : "Getränke",
-    amount: 100,
+    name: settings?.nutrition ? "" : preferences.drinkName,
+    meal: settings?.nutrition ? preferences.categories[0] : "Getränke",
+    amount: settings?.nutrition ? 100 : preferences.drinkAmount,
     unit: settings?.nutrition ? "g" : "ml",
     notes: "",
   });
   const [draft, setDraft] = useState<NutritionEntry | null>(null);
   useEffect(() => {
-    if (draft) { editor.current?.scrollIntoView({block: "start", behavior: "smooth"}); editor.current?.focus({preventScroll:true}); }
+    if (draft) {
+      editor.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      editor.current?.focus({ preventScroll: true });
+    }
   }, [draft?.id]);
   const allowed = (e: NutritionEntry) =>
     e.meal === "Getränke" ? settings?.hydration : settings?.nutrition;
@@ -233,6 +238,9 @@ export function Nutrition() {
     <>
       <p className="eyebrow">SET / DAILY</p>
       <h1>Dein Tagebuch.</h1>
+      <Link className="diary-settings-link" to="/settings">
+        Ernährungseinstellungen →
+      </Link>
       <label>
         Tag
         <input
@@ -244,7 +252,18 @@ export function Nutrition() {
         />
       </label>
       <div className="diary-switch" role="group" aria-label="Tagebuchansicht">
-        {["Tag", "Sammlung", "Historie"].map(tab => <button key={tab} aria-pressed={view===tab} onClick={()=>{setView(tab);setScan(false)}}>{tab}</button>)}
+        {["Tag", "Sammlung", "Historie"].map((tab) => (
+          <button
+            key={tab}
+            aria-pressed={view === tab}
+            onClick={() => {
+              setView(tab);
+              setScan(false);
+            }}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
       <button className="primary" onClick={() => setDraft(fresh())}>
         Eintrag hinzufügen
@@ -276,7 +295,13 @@ export function Nutrition() {
                 })
               }
             >
-              {["Frühstück", "Mittagessen", "Abendessen", "Snacks", "Getränke"]
+              {[
+                ...new Set([
+                  ...preferences.categories,
+                  ...(draft ? [draft.meal] : []),
+                  "Getränke",
+                ]),
+              ]
                 .filter((m) =>
                   m === "Getränke" ? settings.hydration : settings.nutrition,
                 )
@@ -380,161 +405,209 @@ export function Nutrition() {
             ))}
         </article>
       )}
-      {view === "Tag" && <section aria-label="Mahlzeiten">
-      {["Frühstück", "Mittagessen", "Abendessen", "Snacks", "Getränke"]
-        .filter((m) =>
-          m === "Getränke" ? settings.hydration : settings.nutrition,
-        )
-        .map((meal) => (
-          <article key={meal} className="diary-meal">
-            <div className="row"><h2>{meal}</h2><button aria-label={`${meal} hinzufügen`} onClick={()=>setDraft({...fresh(),meal:meal as NutritionEntry["meal"],unit:meal==="Getränke"?"ml":"g",amount:meal==="Getränke"?250:100})}>+</button></div>
-            {!daily.some(e=>e.meal===meal)&&<p className="diary-empty">Noch kein Eintrag</p>}
-            {meal === "Getränke" && (
-              <p>
-                {daily
-                  .filter((e) => e.meal === meal && e.unit === "ml")
-                  .reduce((s, e) => s + e.amount, 0)}{" "}
-                ml erfasst
-              </p>
-            )}
-            {daily
-              .filter((e) => e.meal === meal)
-              .map((e) => (
-                <div className="diary-entry" key={e.id}>
-                  <strong>
-                    {e.time} · {e.name}
-                  </strong>
-                  <p>
-                    {e.amount} {e.unit}
-                    {e.kcal !== undefined && e.unit !== "Portion"
-                      ? ` · ${Math.round((e.kcal * e.amount) / 100)} kcal`
-                      : ""}
-                  </p>
-                  {e.notes && <p>{e.notes}</p>}
-                  {e.photo && (
-                    <img className="meal-photo" src={e.photo} alt={e.name} />
-                  )}
-                  <button onClick={() => setDraft(e)}>Bearbeiten</button>
+      {view === "Tag" && (
+        <section aria-label="Mahlzeiten">
+          {[
+            ...new Set([
+              ...preferences.categories,
+              ...daily.map((e) => e.meal),
+              "Getränke",
+            ]),
+          ]
+            .filter((m) =>
+              m === "Getränke" ? settings.hydration : settings.nutrition,
+            )
+            .map((meal) => (
+              <article key={meal} className="diary-meal">
+                <div className="row">
+                  <h2>{meal}</h2>
                   <button
-                    onClick={async () => {
-                      if (confirm("Eintrag löschen?"))
-                        try {
-                          await db.nutrition.delete(e.id);
-                        } catch {
-                          setMessage("Löschen fehlgeschlagen.");
-                        }
-                    }}
+                    aria-label={`${meal} hinzufügen`}
+                    onClick={() =>
+                      setDraft({
+                        ...fresh(),
+                        meal: meal as NutritionEntry["meal"],
+                        unit: meal === "Getränke" ? "ml" : "g",
+                        amount:
+                          meal === "Getränke" ? preferences.drinkAmount : 100,
+                        name: meal === "Getränke" ? preferences.drinkName : "",
+                      })
+                    }
                   >
-                    Löschen
+                    +
                   </button>
                 </div>
+                {!daily.some((e) => e.meal === meal) && (
+                  <p className="diary-empty">Noch kein Eintrag</p>
+                )}
+                {meal === "Getränke" && preferences.showDrinkTotal && (
+                  <p>
+                    {daily
+                      .filter((e) => e.meal === meal && e.unit === "ml")
+                      .reduce((s, e) => s + e.amount, 0)}{" "}
+                    ml erfasst
+                  </p>
+                )}
+                {daily
+                  .filter((e) => e.meal === meal)
+                  .map((e) => (
+                    <div className="diary-entry" key={e.id}>
+                      <strong>
+                        {e.time} · {e.name}
+                      </strong>
+                      <p>
+                        {e.amount} {e.unit}
+                        {preferences.showNutrients &&
+                        e.kcal !== undefined &&
+                        e.unit !== "Portion"
+                          ? ` · ${Math.round((e.kcal * e.amount) / 100)} kcal`
+                          : ""}
+                      </p>
+                      {e.notes && <p>{e.notes}</p>}
+                      {e.photo && (
+                        <img
+                          className="meal-photo"
+                          src={e.photo}
+                          alt={e.name}
+                        />
+                      )}
+                      <button onClick={() => setDraft(e)}>Bearbeiten</button>
+                      <button
+                        onClick={async () => {
+                          if (confirm("Eintrag löschen?"))
+                            try {
+                              await db.nutrition.delete(e.id);
+                            } catch {
+                              setMessage("Löschen fehlgeschlagen.");
+                            }
+                        }}
+                      >
+                        Löschen
+                      </button>
+                    </div>
+                  ))}
+              </article>
+            ))}
+          <details className="diary-details">
+            <summary>Tagesverlauf & Regeneration</summary>
+            <DailyOverview date={date} />
+          </details>
+        </section>
+      )}
+      {view === "Sammlung" && (
+        <section aria-label="Sammlung">
+          <article>
+            <h2>Lebensmittel suchen</h2>
+            <label>
+              Name oder Barcode
+              <input value={query} onChange={(e) => setQuery(e.target.value)} />
+            </label>
+            <button
+              disabled={busy || !query.trim()}
+              onClick={() => search(query)}
+            >
+              {busy ? "Suche …" : "Open Food Facts durchsuchen"}
+            </button>
+            <button onClick={() => setScan(true)}>Barcode scannen</button>
+            <p>
+              Suche sendet den Suchbegriff an Open Food Facts. Ergebnisse
+              bleiben offline verfügbar. Angaben können unvollständig sein.
+            </p>
+            {scan && (
+              <Scanner
+                onClose={() => setScan(false)}
+                onCode={(code) => {
+                  setScan(false);
+                  setQuery(code);
+                  void search(code);
+                }}
+              />
+            )}
+            {results.map((f) => (
+              <button
+                key={f.id}
+                onClick={() =>
+                  setDraft({
+                    ...fresh(),
+                    name: f.name,
+                    kcal: f.kcal,
+                    notes: f.notes,
+                  })
+                }
+              >
+                {f.name}
+              </button>
+            ))}
+          </article>
+          <article>
+            <h2>Eigene Lebensmittel & Rezepte</h2>
+            {foods
+              .filter(
+                (f) =>
+                  f.kind !== "cache" &&
+                  (f.kind === "drink"
+                    ? settings.hydration
+                    : settings.nutrition) &&
+                  f.name.toLowerCase().includes(query.toLowerCase()),
+              )
+              .map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() =>
+                    setDraft({
+                      ...fresh(),
+                      name: f.name,
+                      notes: f.notes,
+                      meal: f.kind === "drink" ? "Getränke" : fresh().meal,
+                      unit: f.kind === "drink" ? "ml" : "Portion",
+                      amount: f.kind === "drink" ? preferences.drinkAmount : 1,
+                    })
+                  }
+                >
+                  {f.name} ·{" "}
+                  {f.kind === "recipe"
+                    ? "Rezept"
+                    : f.kind === "drink"
+                      ? "Getränk"
+                      : "Lebensmittel"}
+                </button>
               ))}
           </article>
-        ))}
-      <details className="diary-details"><summary>Tagesverlauf & Regeneration</summary><DailyOverview date={date}/></details>
-      </section>}
-      {view === "Sammlung" && <section aria-label="Sammlung">
-      <article>
-        <h2>Lebensmittel suchen</h2>
-        <label>
-          Name oder Barcode
-          <input value={query} onChange={(e) => setQuery(e.target.value)} />
-        </label>
-        <button disabled={busy || !query.trim()} onClick={() => search(query)}>
-          {busy ? "Suche …" : "Open Food Facts durchsuchen"}
-        </button>
-        <button onClick={() => setScan(true)}>Barcode scannen</button>
-        <p>
-          Suche sendet den Suchbegriff an Open Food Facts. Ergebnisse bleiben
-          offline verfügbar. Angaben können unvollständig sein.
-        </p>
-        {scan && (
-          <Scanner
-            onClose={() => setScan(false)}
-            onCode={(code) => {
-              setScan(false);
-              setQuery(code);
-              void search(code);
-            }}
-          />
-        )}
-        {results.map((f) => (
-          <button
-            key={f.id}
-            onClick={() =>
-              setDraft({
-                ...fresh(),
-                name: f.name,
-                kcal: f.kcal,
-                notes: f.notes,
-              })
-            }
-          >
-            {f.name}
-          </button>
-        ))}
-      </article>
-      <article>
-        <h2>Eigene Lebensmittel & Rezepte</h2>
-        {foods
-          .filter(
-            (f) =>
-              f.kind !== "cache" &&
-              (f.kind === "drink" ? settings.hydration : settings.nutrition) &&
-              f.name.toLowerCase().includes(query.toLowerCase()),
-          )
-          .map((f) => (
-            <button
-              key={f.id}
-              onClick={() =>
-                setDraft({
-                  ...fresh(),
-                  name: f.name,
-                  notes: f.notes,
-                  meal: f.kind === "drink" ? "Getränke" : fresh().meal,
-                  unit: f.kind === "drink" ? "ml" : "Portion",
-                  amount: f.kind === "drink" ? 250 : 1,
-                })
-              }
-            >
-              {f.name} ·{" "}
-              {f.kind === "recipe"
-                ? "Rezept"
-                : f.kind === "drink"
-                  ? "Getränk"
-                  : "Lebensmittel"}
-            </button>
+          <article>
+            <h2>Häufig verwendet</h2>
+            {frequent.map((e) => (
+              <button
+                key={e.id}
+                onClick={() =>
+                  setDraft({
+                    ...e,
+                    id: id(),
+                    date,
+                    time: new Date().toTimeString().slice(0, 5),
+                  })
+                }
+              >
+                {e.name} erneut hinzufügen
+              </button>
+            ))}
+          </article>
+        </section>
+      )}
+      {view === "Historie" && (
+        <article>
+          <h2>Mahlzeitenhistorie</h2>
+          <label>
+            Historie durchsuchen
+            <input value={query} onChange={(e) => setQuery(e.target.value)} />
+          </label>
+          {!history.length && <p>Noch keine passenden Einträge.</p>}
+          {history.slice(0, 100).map((e) => (
+            <p key={e.id}>
+              {e.date} · {e.time} · {e.name}
+            </p>
           ))}
-      </article>
-      <article>
-        <h2>Häufig verwendet</h2>
-        {frequent.map((e) => (
-          <button
-            key={e.id}
-            onClick={() =>
-              setDraft({
-                ...e,
-                id: id(),
-                date,
-                time: new Date().toTimeString().slice(0, 5),
-              })
-            }
-          >
-            {e.name} erneut hinzufügen
-          </button>
-        ))}
-      </article>
-      </section>}
-      {view === "Historie" && <article>
-        <h2>Mahlzeitenhistorie</h2>
-        <label>Historie durchsuchen<input value={query} onChange={e=>setQuery(e.target.value)}/></label>
-        {!history.length && <p>Noch keine passenden Einträge.</p>}
-        {history.slice(0, 100).map((e) => (
-          <p key={e.id}>
-            {e.date} · {e.time} · {e.name}
-          </p>
-        ))}
-      </article>}
+        </article>
+      )}
     </>
   );
 }

@@ -1,0 +1,15 @@
+// @vitest-environment jsdom
+import 'fake-indexeddb/auto';
+import React from 'react';
+import {beforeEach,afterEach,expect,it,vi} from 'vitest';
+import {render,screen,fireEvent,waitFor,cleanup} from '@testing-library/react';
+import {MemoryRouter} from 'react-router-dom';
+import {db,init,nutritionDefaults,nutritionPreferencesSchema,exportData,restore} from '../data';
+import {NutritionPreferencesForm,MealReminders} from '../features/nutrition/Preferences';
+beforeEach(async()=>{for(const t of db.tables)await t.clear();await init();localStorage.clear()});
+afterEach(()=>{cleanup();vi.restoreAllMocks()});
+it('validates category uniqueness, reserved drinks, reminder times and amounts',()=>{for(const patch of [{categories:[]},{categories:['Lunch','lunch']},{categories:['Getränke']},{reminderTimes:['24:00']},{drinkAmount:0}])expect(nutritionPreferencesSchema.safeParse({...nutritionDefaults,...patch}).success).toBe(false)});
+it('persists preferences and custom category entries through backup',async()=>{const preferences={...nutritionDefaults,showNutrients:false,categories:['Brunch'],drinkAmount:300,showDrinkTotal:false};await db.settings.update('settings',{nutritionPreferences:preferences});await db.nutrition.put({id:'custom',name:'Brot',meal:'Brunch',date:'2026-11-24',time:'10:00',amount:1,unit:'Portion',notes:''});const backup=await exportData();await db.settings.clear();await restore(backup);expect((await db.settings.get('settings'))?.nutritionPreferences).toEqual(preferences);expect((await db.nutrition.get('custom'))?.meal).toBe('Brunch')});
+it('saves user-edited form locally',async()=>{render(<NutritionPreferencesForm settings={(await db.settings.get('settings'))!}/>);fireEvent.click(screen.getByLabelText('Nährwertinformationen anzeigen'));fireEvent.change(screen.getByLabelText('Kategorien – eine pro Zeile'),{target:{value:'Brunch\nAbendbrot'}});fireEvent.click(screen.getByText('Ernährungseinstellungen speichern'));await waitFor(()=>expect(screen.getByRole('status').textContent).toContain('gespeichert'));expect((await db.settings.get('settings'))?.nutritionPreferences?.showNutrients).toBe(false)});
+it('shows an opt-in reminder at its time, dismisses it and suppresses duplicates',async()=>{const time=new Date().toTimeString().slice(0,5);await db.settings.update('settings',{nutrition:true,nutritionPreferences:{...nutritionDefaults,reminders:true,reminderTimes:[time]}});const view=render(<MemoryRouter><MealReminders/></MemoryRouter>);await screen.findByText(/Deine Mahlzeitenerinnerung/);fireEvent.click(screen.getByText('Schließen'));expect(screen.queryByText(/Deine Mahlzeitenerinnerung/)).toBeNull();view.unmount();render(<MemoryRouter><MealReminders/></MemoryRouter>);await waitFor(()=>expect(localStorage.length).toBe(1));expect(screen.queryByText(/Deine Mahlzeitenerinnerung/)).toBeNull()});
+it('does not show reminders with nutrition disabled',async()=>{await db.settings.update('settings',{nutrition:false,nutritionPreferences:{...nutritionDefaults,reminders:true,reminderTimes:[new Date().toTimeString().slice(0,5)]}});render(<MemoryRouter><MealReminders/></MemoryRouter>);expect(screen.queryByRole('status')).toBeNull()});

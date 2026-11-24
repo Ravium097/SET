@@ -1,3 +1,4 @@
+import { NutritionPreferencesForm, MealReminders } from "./features/nutrition/Preferences";
 import { Nutrition, Modules, DailyOverview } from "./features/nutrition/Nutrition";
 import { StartupBoundary } from "./components/pwa/StartupBoundary";
 import React, { useState, useEffect, useId } from "react";
@@ -113,6 +114,7 @@ function App() {
           </Link>
         </header>
         <div className={pathname === "/settings" ? "update-panel" : "update-panel compact-update"}><UpdateControl compact={pathname !== "/settings"} /></div>
+        <MealReminders/>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/training" element={<Training />} />
@@ -1040,6 +1042,7 @@ function Settings() {
     <>
       <h1>Einstellungen</h1>
       <Modules settings={s}/>
+      <NutritionPreferencesForm settings={s}/>
       <ThemeStudio settings={s}/>
       <article>
         <h2>Pausentimer</h2>

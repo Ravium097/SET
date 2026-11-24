@@ -24,3 +24,8 @@ Der ZXing-Scanner nutzt die Rückkamera mit HTTPS/Kameraberechtigung und beendet
 - `node scripts/check-nutrition.cjs`: Modulschalter, Offline-Neuladen/-Bearbeiten, Datenerhalt und Mobil-/Tabletansichten.
 
 Physische iPhone/iPad-Kameras, tatsächliche Scan-Erkennung und Live-API-Verfügbarkeit müssen zusätzlich auf Geräten geprüft werden. Automatisierte Chromium-Viewporttests ersetzen keinen Safari-Gerätetest.
+
+## Nutrition Settings 03
+Ernährungseinstellungen unter Einstellungen: Nährwertanzeige, 1–12 individuelle Mahlzeitenkategorien in eigener Reihenfolge, frei wählbare Erinnerungszeiten sowie Standardgetränk, Standardmenge und optionale Trinkmengensumme. Einstellungen werden explizit gespeichert, in IndexedDB gehalten und mit JSON exportiert. Bestehende Backups erhalten die bisherigen Vorgaben; bestehende Einträge in entfernten Kategorien bleiben sichtbar. Die reservierte Kategorie Getränke bleibt dem unabhängigen Trinkmodul zugeordnet.
+
+Erinnerungen sind standardmäßig deaktiviert und erscheinen nur bei geöffneter, sichtbarer App mit aktiviertem Nutrition-Modul zur eingestellten Minute. Geschlossene Apps erhalten keine Hintergrundbenachrichtigungen. Pro Tag/Uhrzeit wird die Anzeige lokal vorgemerkt, um Wiederholungen beim Neuladen zu verhindern. Keine kostenpflichtigen Dienste, Push-Server, KI oder Kalorienzielberechnung.
