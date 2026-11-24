@@ -611,3 +611,13 @@ html, body { background-color:var(--bg); }
 @media(max-height:740px) { .body-map { height:390px; } }
 .meal-photo { display:block; width:100%; max-height:320px; object-fit:contain; margin:12px 0; }
 .diary-entry { padding:16px 0; border-top:1px solid var(--line); overflow-wrap:anywhere; }
+.diary-switch { display:flex; gap:4px; border-bottom:1px solid var(--line); margin:20px 0; padding-bottom:8px; }
+.diary-switch button { flex:1; min-width:0; margin:0; padding:12px 6px; border-color:transparent; background:transparent; color:var(--muted); }
+.diary-switch button[aria-pressed="true"] { background:var(--ink); color:var(--bg); }
+.diary-meal { padding:18px 20px; }
+.diary-meal h2 { margin:0; }
+.diary-meal .row button { margin:0; min-width:44px; min-height:44px; font-size:22px; }
+.diary-empty { color:var(--muted); font-size:13px; margin:4px 0 0; }
+.diary-details { margin:24px 0; border-top:1px solid var(--line); }
+.diary-details summary { cursor:pointer; padding:18px 0; font-weight:600; }
+.diary-editor { scroll-margin-top:16px; }

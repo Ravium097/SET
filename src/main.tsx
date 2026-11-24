@@ -18,6 +18,7 @@ import {
   Home,
   Dumbbell,
   CalendarDays,
+  Utensils,
   ChartNoAxesCombined,
   Settings as Gear,
   Plus,
@@ -172,7 +173,7 @@ function App() {
           [Dumbbell, "/training", "Training"],
           [CalendarDays, "/history", "Verlauf"],
           [ChartNoAxesCombined, "/stats", "Statistik"],
-          ...(settings.nutrition || settings.hydration ? [[CalendarDays, "/nutrition", "Tagebuch"]] : []),
+          ...(settings.nutrition || settings.hydration ? [[Utensils, "/nutrition", "Tagebuch"]] : []),
         ].map(([Icon, to, label]) => {
           const C = Icon as typeof Home;
           return (

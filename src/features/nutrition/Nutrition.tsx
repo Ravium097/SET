@@ -147,6 +147,8 @@ function Scanner({
 export function Nutrition() {
   const settings = useLiveQuery(() => db.settings.get("settings"));
   const [date, setDate] = useState(localDay());
+  const [view, setView] = useState("Tag");
+  const editor = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Food[]>([]);
   const [message, setMessage] = useState("");
@@ -165,6 +167,9 @@ export function Nutrition() {
     notes: "",
   });
   const [draft, setDraft] = useState<NutritionEntry | null>(null);
+  useEffect(() => {
+    if (draft) { editor.current?.scrollIntoView({block: "start", behavior: "smooth"}); editor.current?.focus({preventScroll:true}); }
+  }, [draft?.id]);
   const allowed = (e: NutritionEntry) =>
     e.meal === "Getränke" ? settings?.hydration : settings?.nutrition;
   async function search(q: string) {
@@ -238,13 +243,15 @@ export function Nutrition() {
           }}
         />
       </label>
-      <DailyOverview date={date} />
+      <div className="diary-switch" role="group" aria-label="Tagebuchansicht">
+        {["Tag", "Sammlung", "Historie"].map(tab => <button key={tab} aria-pressed={view===tab} onClick={()=>{setView(tab);setScan(false)}}>{tab}</button>)}
+      </div>
       <button className="primary" onClick={() => setDraft(fresh())}>
         Eintrag hinzufügen
       </button>
       <p role="status">{message}</p>
       {draft && (
-        <article>
+        <article ref={editor} tabIndex={-1} className="diary-editor">
           <h2>
             {all.some((e) => e.id === draft.id)
               ? "Eintrag bearbeiten"
@@ -373,13 +380,15 @@ export function Nutrition() {
             ))}
         </article>
       )}
+      {view === "Tag" && <section aria-label="Mahlzeiten">
       {["Frühstück", "Mittagessen", "Abendessen", "Snacks", "Getränke"]
         .filter((m) =>
           m === "Getränke" ? settings.hydration : settings.nutrition,
         )
         .map((meal) => (
-          <article key={meal}>
-            <h2>{meal}</h2>
+          <article key={meal} className="diary-meal">
+            <div className="row"><h2>{meal}</h2><button aria-label={`${meal} hinzufügen`} onClick={()=>setDraft({...fresh(),meal:meal as NutritionEntry["meal"],unit:meal==="Getränke"?"ml":"g",amount:meal==="Getränke"?250:100})}>+</button></div>
+            {!daily.some(e=>e.meal===meal)&&<p className="diary-empty">Noch kein Eintrag</p>}
             {meal === "Getränke" && (
               <p>
                 {daily
@@ -422,6 +431,9 @@ export function Nutrition() {
               ))}
           </article>
         ))}
+      <details className="diary-details"><summary>Tagesverlauf & Regeneration</summary><DailyOverview date={date}/></details>
+      </section>}
+      {view === "Sammlung" && <section aria-label="Sammlung">
       <article>
         <h2>Lebensmittel suchen</h2>
         <label>
@@ -512,14 +524,17 @@ export function Nutrition() {
           </button>
         ))}
       </article>
-      <article>
+      </section>}
+      {view === "Historie" && <article>
         <h2>Mahlzeitenhistorie</h2>
+        <label>Historie durchsuchen<input value={query} onChange={e=>setQuery(e.target.value)}/></label>
+        {!history.length && <p>Noch keine passenden Einträge.</p>}
         {history.slice(0, 100).map((e) => (
           <p key={e.id}>
             {e.date} · {e.time} · {e.name}
           </p>
         ))}
-      </article>
+      </article>}
     </>
   );
 }
