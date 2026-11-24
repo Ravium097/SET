@@ -40,7 +40,26 @@ export const workoutSchema = z.object({
   status: z.enum(["active", "completed", "template"]),
   exercises: z.array(itemSchema),
 });
+const nutrientFields = {
+  kcal: z.number().nonnegative().finite().optional(),
+  protein: z.number().nonnegative().finite().optional(),
+  carbs: z.number().nonnegative().finite().optional(),
+  fat: z.number().nonnegative().finite().optional(),
+};
+const source = z.enum(["database", "comparable", "manual", "recipe"]);
+export const ingredientSchema = z.object({
+  foodId: z.string().optional(), name: z.string().trim().min(1),
+  amount: z.number().positive().finite(), unit: z.enum(["g", "ml"]),
+  source: source.optional(), ...nutrientFields,
+});
+const provenanceFields = {
+  source: source.optional(), sourceName: z.string().optional(),
+  barcode: z.string().regex(/^\d{8,14}$/).optional(),
+  nutrientBasis: z.enum(["100", "portion"]).optional(),
+};
 export const nutritionSchema = z.object({
+  ...provenanceFields,
+  foodId: z.string().optional(),
   id: z.string(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
@@ -59,6 +78,15 @@ export const nutritionSchema = z.object({
   fat: z.number().nonnegative().finite().optional(),
 });
 export const foodSchema = z.object({
+  ...provenanceFields,
+  brand: z.string().optional(),
+  imageUrl: z.string().url().regex(/^https:\/\//).optional(),
+  aliases: z.array(z.string()).optional(),
+  favorite: z.boolean().optional(),
+  lastUsed: z.number().finite().nonnegative().optional(),
+  cachedAt: z.number().finite().nonnegative().optional(),
+  ingredients: z.array(ingredientSchema).max(100).optional(),
+  portions: z.number().positive().finite().optional(),
   id: z.string(),
   name: z.string().min(1),
   kind: z.enum(["food", "recipe", "drink", "cache"]),
