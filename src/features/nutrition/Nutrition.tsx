@@ -1,3 +1,4 @@
+import { ActionMenu } from "../../components/ui/ActionMenu";
 import {DateField} from "../../components/ui/DateField";
 import { nutritionDefaults } from "../../data";
 import { useEffect, useRef, useState } from "react";
@@ -465,7 +466,7 @@ export function Nutrition() {
                           alt={e.name}
                         />
                       )}
-                      <button onClick={() => setDraft(e)}>Bearbeiten</button>
+                      <ActionMenu label={`Optionen für ${e.name}`}><button onClick={() => setDraft(e)}>Bearbeiten</button>
                       <button
                         onClick={async () => {
                           if (confirm("Eintrag löschen?"))
@@ -477,7 +478,7 @@ export function Nutrition() {
                         }}
                       >
                         Löschen
-                      </button>
+                      </button></ActionMenu>
                     </div>
                   ))}
               </article>

@@ -11,13 +11,14 @@ export default defineConfig({
       registerType: "prompt",
       injectRegister: false,
       manifest: {
-        name: "BASE.",
+        name: "BASE — Minimal Performance",
         short_name: "BASE.",
         display: "standalone",
         start_url: "/",
-        theme_color: "#111111",
-        background_color: "#111111",
+        theme_color: "#101113",
+        background_color: "#101113",
         icons: [
+          { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
           { src: "/icons/192.png", sizes: "192x192", type: "image/png" },
           {
             src: "/icons/512.png",

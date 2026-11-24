@@ -1,3 +1,6 @@
+import { PeriodFilter } from "../components/ui/PeriodFilter";
+import { Info } from "lucide-react";
+import { differenceInCalendarDays } from "date-fns";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -7,13 +10,14 @@ import { bodyOutline, head, frontRegions, backRegions, neutralDetails } from "./
 export function MuscleMap() {
   const ws = useLiveQuery(()=>db.workouts.toArray()) ?? [];
   const ex = useLiveQuery(()=>db.exercises.toArray()) ?? [];
-  const [days,setDays] = useState(7), [side,setSide] = useState("front"), [selected,select] = useState("");
+  const [period,setPeriod] = useState("7"), [side,setSide] = useState("front"), [selected,select] = useState("");
+  const days = period === "all" ? Math.max(1, ...ws.filter(w=>w.status === "completed").map(w=>differenceInCalendarDays(new Date(), new Date(w.date+"T12:00:00"))+1)) : Number(period);
   const rows = muscleData(ws,ex,days);
   const totals = new Map<string,number>();
   rows.forEach(r=>totals.set(r.muscle,(totals.get(r.muscle)??0)+r.sets));
   const max = Math.max(1,...totals.values());
   return <article className="muscle-map"><h2>Muskelkarte</h2><p>Abgeschlossene Arbeitssätze pro Muskelgruppe.</p>
-    <div className="segmented" role="group" aria-label="Zeitraum Muskelkarte">{[7,30,90].map(n=><button key={n} aria-pressed={days===n} onClick={()=>setDays(n)}>{n}T</button>)}</div>
+    <PeriodFilter value={period} onChange={setPeriod}/>
     <div className="segmented" role="group" aria-label="Körperansicht">{[["front","Vorne"],["back","Hinten"]].map(([value,label])=><button key={value} aria-pressed={side===value} onClick={()=>setSide(value)}>{label}</button>)}</div>
     <svg viewBox="0 0 240 430" aria-label={side === "front" ? "Muskelgruppen Vorderseite" : "Muskelgruppen Rückseite"} className="body-map">
       <g fill="var(--surface-alt)" stroke="var(--border)" strokeWidth="1.2"><path d={head}/><path d={bodyOutline}/></g>
@@ -29,7 +33,7 @@ export function MuscleMap() {
         {[false,true].map(mirror=><g key={String(mirror)} transform={mirror ? "translate(240 0) scale(-1 1)" : undefined}>{paths.map((d,i)=><path key={i} d={d}/>)}</g>)}
       </g>)}
     </svg>
-    <p className="anatomy-note">Die Zeichnung zeigt anatomische Teilflächen. Die Auswertung bleibt auf Ebene deiner gespeicherten Muskelgruppen; Teilflächen erhalten keine geschätzten Trainingswerte.</p>
+    <details className="map-info"><summary><Info size={18}/> Info zur Muskelkarte</summary><p className="anatomy-note">Die Zeichnung zeigt anatomische Teilflächen. Die Auswertung bleibt auf Ebene deiner gespeicherten Muskelgruppen; Teilflächen erhalten keine geschätzten Trainingswerte.</p></details>
     <div className="muscle-buttons">{[...new Set([...(side === "front" ? frontRegions : backRegions).map(x=>x[0]),...totals.keys()])].map(m=><button key={m} aria-pressed={selected===m} onClick={()=>select(m)}>{m} · {totals.get(m)??0}</button>)}</div>
     <div aria-live="polite">{selected ? <><h3>{selected}</h3>{rows.filter(r=>r.muscle===selected).map(r=><p key={r.workoutId+r.itemId}><Link to={`/workout/${r.workoutId}`}>{r.date} · {r.name}<br/>{r.sets} Arbeitssätze · {r.volume.toLocaleString("de-DE")} kg →</Link></p>)}{!totals.has(selected) && <p>Keine abgeschlossenen Arbeitssätze in diesem Zeitraum.</p>}</> : <p>Tippe auf eine Muskelgruppe für die Trainingsdetails.</p>}</div>
   </article>;
