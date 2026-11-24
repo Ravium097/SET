@@ -1,3 +1,4 @@
+import { Dashboard } from "./features/Dashboard";
 import { ActionMenu } from "./components/ui/ActionMenu";
 import { PeriodFilter } from "./components/ui/PeriodFilter";
 import {DateField} from "./components/ui/DateField";
@@ -211,39 +212,6 @@ function App() {
       </footer>
     </>
   );
-}
-function Dashboard() {
-  const all = useLiveQuery(() => db.workouts.toArray());
-  const settings = useLiveQuery(() => db.settings.get("settings"));
-  const entries = useLiveQuery(() => db.nutrition.where("date").equals(day()).toArray()) ?? [];
-  const [selected, select] = useState(day());
-  const done = (all ?? []).filter(w => w.status === "completed").sort((a,b) => b.date.localeCompare(a.date));
-  const active = all?.find(w => w.status === "active");
-  const completed = done.filter(w => w.date === day());
-  const today = new Date(), monday = startOfWeek(today, { weekStartsOn: 1 });
-  const days = Array.from({length: 7}, (_, i) => { const d = new Date(monday); d.setDate(d.getDate()+i); return d; });
-  const week = done.filter(w => w.date >= day(monday) && w.date <= day());
-  if (!all) return <p role="status">Tagesübersicht wird geladen …</p>;
-  return <div className="dashboard">
-    <p className="eyebrow">{format(today, "EEEE, d. MMMM", {locale: de})}</p>
-    <h1>Dein Tag. Deine Basis.</h1>
-    {!all.length && <Onboarding/>}
-    <article className="dashboard-start">
-      <small>{active ? "TRAINING LÄUFT" : completed.length ? "HEUTE ABGESCHLOSSEN" : "BEREIT, WENN DU ES BIST"}</small>
-      <h2>{active?.name ?? completed[0]?.name ?? "Zeit für dein Training"}</h2>
-      <p>{active ? `${active.exercises.length} Übungen · jederzeit fortsetzen` : completed.length ? `${completed.length} ${completed.length === 1 ? "Training" : "Trainings"} · ${completed.reduce((n,w)=>n+count(w),0)} Sätze · ${fmt(completed.reduce((n,w)=>n+volume(w),0))} kg` : "Wähle deine Vorlage oder trainiere frei."}</p>
-      <Link className="primary action" to={active ? `/workout/${active.id}` : completed.length ? `/workout/${completed[0].id}` : "/training"}><Play size={18}/>{active ? "Training fortsetzen" : completed.length ? "Training ansehen" : "Training starten"}</Link>
-    </article>
-    <section aria-labelledby="week-heading">
-      <div className="row"><h2 id="week-heading">Deine Woche</h2><Link to="/history" aria-label="Trainingskalender öffnen"><CalendarDays size={20}/></Link></div>
-      <div className="dashboard-week">{days.map(d => { const key=day(d), n=done.filter(w=>w.date===key).length; return <button key={key} aria-pressed={selected===key} aria-label={`${format(d,"EEEE, d. MMMM",{locale:de})}: ${n} Trainings`} onClick={()=>select(key)}><small>{format(d,"EEEEEE",{locale:de})}</small><strong>{d.getDate()}</strong><span>{n ? "●" : "·"}</span></button>; })}</div>
-      <p className="dashboard-note" aria-live="polite">{format(new Date(selected+"T12:00:00"),"EEEE",{locale:de})} · {done.filter(w=>w.date===selected).length} abgeschlossene Trainings</p>
-    </section>
-    <section><div className="row"><h2>Diese Woche</h2><Link to="/progress">Fortschritt</Link></div>
-      <div className="metrics"><article><b>{week.length}</b><small>Trainings</small></article><article><b>{week.reduce((n,w)=>n+count(w),0)}</b><small>Sätze</small></article><article><b>{fmt(week.reduce((n,w)=>n+volume(w),0))}</b><small>Volumen · kg</small></article></div>
-    </section>
-    {(settings?.nutrition || settings?.hydration) && <Link to="/nutrition" className="tile diary-preview"><span><Utensils size={20}/> Tagebuch<small>{entries.filter(e=>e.meal === "Getränke" ? settings.hydration : settings.nutrition).length} Einträge heute · Notizen & Regeneration</small></span><Plus size={20}/></Link>}
-  </div>;
 }
 function Progress({section="overview"}:{section?:"overview"|"history"|"muscles"}) {
   return <><h1>Fortschritt</h1><nav className="progress-tabs" aria-label="Fortschrittsbereiche">{[["overview","/progress","Übersicht"],["history","/history","Verlauf"],["muscles","/progress/muscles","Muskeln"]].map(([key,url,label])=><Link key={key} to={url} aria-current={section===key ? "page" : undefined}>{label}</Link>)}</nav>{section === "history" ? <History/> : section === "muscles" ? <MuscleMap/> : <Stats/>}</>;
