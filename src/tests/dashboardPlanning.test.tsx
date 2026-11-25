@@ -42,9 +42,9 @@ it('creates, duplicates and switches weekly plans and persists temporary rest da
 it('updates the next widget immediately after actual completion',async()=>{
  const date=dayKey(new Date()),days=Array.from({length:7},()=>[] as {id:string;name:string}[]);days[(new Date().getDay()+6)%7]=[{id:'a',name:'Technik'},{id:'b',name:'Mobilität'}];
  await db.settings.update('settings',{dashboardLayout:[{id:'next',kind:'next',size:'medium',hidden:false}],trainingPlans:[{id:'p',name:'Plan',days,overrides:{}}],activeTrainingPlan:'p'});
- open();await screen.findByRole('button',{name:'Technik starten'});
+ open();await screen.findByText('Technik');
  await db.workouts.put({id:'finished',name:'Technik',date,started:0,duration:60,status:'completed',exercises:[],scheduledSlot:'a',scheduledDate:date});
- await screen.findByRole('button',{name:'Mobilität starten'});expect(screen.queryByRole('button',{name:'Technik starten'})).toBeNull();
+ await screen.findByText('Mobilität');expect(screen.queryByText('Technik')).toBeNull();
 });
 it('reorders cards with pointer drag and drop and persists the result',async()=>{
  const capture=vi.fn();HTMLElement.prototype.setPointerCapture=capture;
@@ -66,4 +66,17 @@ it('adds a live gallery widget, replaces it and removes it independently',async(
  await waitFor(async()=>expect((await db.settings.get('settings'))?.dashboardLayout?.at(-1)?.kind).toBe('quick'));
  fireEvent.click([...document.querySelector('[data-widget-id]:last-of-type')!.querySelectorAll('button')].find(b=>b.textContent==='Entfernen')!);
  await waitFor(async()=>expect((await db.settings.get('settings'))?.dashboardLayout).toHaveLength(6));
+});
+it('opens the plan by tapping its widget without extra card buttons',async()=>{
+ await db.settings.update('settings',{dashboardLayout:[{id:'next',kind:'next',size:'small',hidden:false}]});
+ open();const card=await screen.findByRole('button',{name:'Nächstes Training'});
+ expect(card.querySelectorAll('button,a')).toHaveLength(0);
+ expect(screen.queryByText('Plan bearbeiten')).toBeNull();
+ fireEvent.click(card);await screen.findByRole('dialog',{name:'Wochenplan'});
+});
+it('opens notes for editing from a compact widget and saves locally',async()=>{
+ await db.settings.update('settings',{dashboardLayout:[{id:'notes',kind:'notes',size:'small',hidden:false}]});
+ open();fireEvent.click(await screen.findByRole('button',{name:'Trainingsnotizen'}));
+ fireEvent.change(screen.getByLabelText('Trainingsnotizen bearbeiten'),{target:{value:'Technik ruhig ausführen'}});
+ await waitFor(async()=>expect((await db.dayNotes.get('training-notes'))?.notes).toBe('Technik ruhig ausführen'));
 });

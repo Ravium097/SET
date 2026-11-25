@@ -79,3 +79,20 @@
 @media(prefers-reduced-motion:reduce) { .widget-cell { transition:none; } }
 .widget-content { display:flex; flex:1; min-height:0; min-width:0; }
 .widget-content > .widget { flex:1; height:auto; }
+/* Small means a true square, independent of content or neighbouring cards. */
+.widget-cell.size-small .widget-content { aspect-ratio:1; flex:none; position:relative; overflow:hidden; border-radius:24px; }
+.widget-cell.size-small .widget-content > .widget { position:absolute; inset:0; height:100%; min-height:0; gap:12px; overflow:hidden; }
+.widget-tap { text-align:left; cursor:pointer; font:inherit; }
+.widget-tap:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+.widget-cell.size-small .count-ring { width:44px; height:44px; }
+.widget-cell.size-small .widget-summary > p:nth-of-type(n+2) { display:none; }
+.widget-cell.size-small .widget h2,.widget-cell.size-small .widget p,.widget-cell.size-small .widget strong,.widget-cell.size-small .widget small { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+.widget-cell.size-small .widget p { font-size:14px; line-height:1.4; }
+.widget-cell.size-small .widget-number { display:flex; }
+@media(max-width:360px) {
+ .widget-cell.size-small .widget-content { border-radius:20px; }
+ .widget-cell.size-small .widget-content > .widget { gap:8px; }
+ .widget-cell.size-small .count-ring { width:36px; height:36px; }
+ .widget-cell.size-small .widget h2 { font-size:14px; }
+ .widget-cell.size-small .widget small { -webkit-line-clamp:1; }
+}
