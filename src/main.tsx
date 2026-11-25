@@ -615,7 +615,7 @@ function Settings() {
     return (<>
       <h1>{tr("Einstellungen")}</h1>
       <LanguagePicker/><Modules settings={s}/>
-      <NutritionPreferencesForm settings={s}/>
+      {(s.nutrition || s.hydration) && <NutritionPreferencesForm settings={s}/>}
       <ThemeStudio settings={s}/>
       <article>
         <h2>{tr("Pausentimer")}</h2>
