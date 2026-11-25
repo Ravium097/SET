@@ -96,3 +96,8 @@
  .widget-cell.size-small .widget h2 { font-size:14px; }
  .widget-cell.size-small .widget small { -webkit-line-clamp:1; }
 }
+
+/* Keep the next session's name and date on the same left edge. */
+.widget-next { align-items:stretch; text-align:left; }
+.widget-next-details { display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; }
+.widget-next-details > * { max-width:100%; text-align:left; }

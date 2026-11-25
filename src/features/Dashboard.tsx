@@ -72,11 +72,11 @@ export function Dashboard() {
     else await saveLayout([...layout,{id:id(),kind:key,size:'medium',hidden:false}]);
   }
   if(!workouts||!settings) return <p role="status">Tagesübersicht wird geladen …</p>;
-  const summary=(title:string,content:ReactNode,action:()=>void)=><button className="widget widget-summary widget-tap" aria-label={title} onClick={action}><h2>{title}</h2>{content}</button>;
+  const summary=(title:string,content:ReactNode,action:()=>void,className="")=><button className={`widget widget-summary widget-tap ${className}`} aria-label={title} onClick={action}><h2>{title}</h2>{content}</button>;
   const workoutButton=(slot:typeof today[number],date=dayKey(now))=><button key={slot.id} disabled={slot.completed} onClick={()=>void launch({...slot,date})}>{slot.completed?'✓ ':''}{slot.name}{!slot.completed?' starten':''}</button>;
   const records=new Map<string,number>();data.completed.forEach(w=>w.exercises.forEach(e=>e.sets.filter(s=>s.completed&&s.type!=='warmup'&&s.weight!==null).forEach(s=>records.set(e.name,Math.max(records.get(e.name)??0,s.weight!)))));
   const widgets:Record<WidgetId,ReactNode>={
-    next:summary('Nächstes Training',next?<><strong>{next.name}</strong><small>{format(new Date(next.date+'T12:00:00'),'EEEE, d. MMMM',{locale:de})}</small></>:<p>{plan?'Zeit für Erholung':'Noch kein Wochenplan'}</p>,()=>P(true)),
+    next:summary('Nächstes Training',<div className="widget-next-details">{next?<><strong>{next.name}</strong><small>{format(new Date(next.date+'T12:00:00'),'EEEE, d. MMMM',{locale:de})}</small></>:<p>{plan?'Zeit für Erholung':'Noch kein Wochenplan'}</p>}</div>,()=>P(true),'widget-next'),
     today:summary('Heutiges Training',today.length?<><strong>{today.filter(s=>s.completed).length} / {today.length}</strong><small>{today.map(s=>s.name).join(' · ')}</small></>:<p>Ruhetag · Erholung</p>,()=>Sessions(true)),
     split:summary(plan?.name??'Trainingssplit',<>{week.map(d=><p key={d.date}><small>{d.name}</small>{d.slots.length?d.slots.map(s=><span key={s.id}>{s.completed?'✓ ':''}{s.name} </span>):'Erholung'}</p>)}</>,()=>P(true)),
     completion:summary('Diese Woche',<><strong>{week.flatMap(d=>d.slots).filter(s=>s.completed).length} / {week.flatMap(d=>d.slots).length}</strong><small>Geplante Trainings abgeschlossen</small></>,()=>P(true)),
