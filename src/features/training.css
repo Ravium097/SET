@@ -1,0 +1,31 @@
+/* Training-only refinements; the shared dock retains its reserved viewport row. */
+.training-screen { padding-bottom:24px; }
+.training-screen button.training-free { display:flex; flex-direction:row; align-items:center; justify-content:center; gap:8px; width:100%; margin:0 0 16px; }
+.training-free > svg { flex:none; }
+.training-free > span { text-align:center; }
+.training-shortcuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.training-shortcuts > .widget { align-items:flex-start; text-align:left; gap:16px; min-height:124px; height:100%; font:inherit; }
+.training-screen .training-shortcuts h2 { margin:0 0 6px; }
+.training-shortcuts small { margin:0; }
+.training-section-heading { display:flex; align-items:center; gap:4px; margin:20px 0 10px; }
+.training-screen .training-section-heading h2 { flex:1; margin:0; min-width:0; }
+.training-section-heading > button { margin:0; background:transparent; }
+.training-info { position:relative; flex:none; margin:0; padding:0; background:transparent; }
+.training-info > summary { display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; list-style:none; cursor:pointer; }
+.training-info > summary::before,.training-info > summary::-webkit-details-marker { display:none; }
+.training-info > p { position:absolute; z-index:2; right:0; top:100%; width:min(260px,65vw); margin:4px 0 0; padding:16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); font-size:14px; }
+.training-screen .personal-templates { margin:0 0 12px; }
+.training-template-list { display:grid; gap:12px; }
+.training-screen .template-card { display:grid; grid-template-columns:minmax(0,1fr) 44px 44px; align-items:center; gap:8px; margin:0; padding:14px 16px; scroll-margin-block:24px; }
+.training-template-copy { min-width:0; }
+.training-template-copy h3 { margin:0; overflow-wrap:anywhere; }
+.training-template-copy p { margin:4px 0 0; font-size:14px; color:var(--muted); }
+.training-screen .template-card > .icon-button { margin:0; }
+.training-screen .template-card > .context-menu:not([open]) { position:static; margin:0; }
+.training-screen .template-card > .context-menu > summary { width:44px; min-width:44px; padding:8px; }
+.training-screen .template-card > .context-menu[open] { grid-column:1/-1; margin:0; }
+@media(max-width:360px) {
+ .training-shortcuts > .widget { padding:16px; }
+ .training-screen .training-shortcuts h2 { font-size:14px; }
+ .training-screen .template-card { padding:12px; }
+}

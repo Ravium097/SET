@@ -89,7 +89,7 @@ import { matchesExercise } from "./services/exerciseCatalog";
 import { startWorkout, carryForward, appendSet } from "./services/carryForward";
 import { previousPerformance } from "./services/previousPerformance";
 import { PreviousSet } from "./components/workout/PreviousSet";
-import { PersonalTemplates } from "./components/templates/PersonalTemplates";
+import { Training } from "./features/Training";
 import { UpdateControl } from "./components/pwa/UpdateControl";
 const day = (d = new Date()) => format(d, "yyyy-MM-dd");
 const fmt = (n: number) =>
@@ -228,76 +228,6 @@ function WorkoutCard({ w }: { w: Workout }) {
         </p>
       </article>
     </Link>
-  );
-}
-function Training() {
-  const libraryCount = useLiveQuery(() => db.exercises.count()) ?? 0;
-  const ws = useLiveQuery(() => db.workouts.toArray()) ?? [];
-  const navigate = useNavigate();
-  async function start(template?: Workout) {
-    const w = await startWorkout(template);
-    navigate(`/workout/${w.id}`);
-  }
-  return (
-    <>
-      <h1>Training</h1>
-      <button className="primary action" onClick={() => start().catch(error)}>
-        <Plus />
-        Freies Training starten
-      </button>
-      <Link className="tile" to="/library">
-        <span>Übungsbibliothek<small>{libraryCount} Übungen</small></span> <Dumbbell />
-      </Link>
-      {!ws.length && <Onboarding allowDismiss={false} />}
-      <h2>Deine Vorlagen</h2>
-      <p>Letzte Satzwerte werden beim Start übernommen.</p>
-      <PersonalTemplates />
-      {ws
-        .filter((w) => w.status === "template")
-        .map((w) => (
-          <article key={w.id} className="template-card">
-            <div className="template-title"><h3>{w.name}</h3>
-            <button className="primary icon-button" aria-label={`${w.name} starten`} onClick={() => start(w).catch(error)}><Play size={18}/></button></div>
-            <p>{w.exercises.length} Übungen</p>
-            <ActionMenu label={`Optionen für ${w.name}`}>
-            <Link className="button" to={`/workout/${w.id}`}>
-              Bearbeiten
-            </Link>
-            <button
-              onClick={() =>
-                db.workouts
-                  .add({
-                    ...structuredClone(w),
-                    id: id(),
-                    name: w.name + " Kopie",
-                  })
-                  .catch(error)
-              }
-            >
-              Duplizieren
-            </button>
-            <button onClick={() => {if(confirm(`Vorlage „${w.name}“ löschen?`)) db.workouts.delete(w.id).catch(error);}}>Löschen</button>
-            </ActionMenu>
-          </article>
-        ))}
-      <button
-        onClick={async () => {
-          const w: Workout = {
-            id: id(),
-            name: "Neue Vorlage",
-            date: day(),
-            status: "template",
-            started: null,
-            duration: null,
-            exercises: [],
-          };
-          await db.workouts.add(w);
-          navigate(`/workout/${w.id}`);
-        }}
-      >
-        ＋ Vorlage erstellen
-      </button>
-    </>
   );
 }
 export function Numeric({value,onChange,step,label}:{value:number|null;onChange:(v:number|null)=>void;step:number;label:string}) {
