@@ -17,13 +17,13 @@ export function carryForward(w: Workout, history: Workout[], onlySetIds?: Readon
   })};
 }
 
-export async function startWorkout(template?: Workout): Promise<Workout> {
+export async function startWorkout(template?: Workout, schedule?: {slot: string; date: string}): Promise<Workout> {
   return db.transaction("rw",db.workouts,async()=>{
     const active=await db.workouts.where("status").equals("active").first();
     if(active) return active;
     const now=new Date();
     const date=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
-    const fresh:Workout={id:id(),name:template?.name ?? "Freies Training",date,started:now.getTime(),duration:null,status:"active",
+    const fresh:Workout={templateId:template?.id || undefined,scheduledSlot:schedule?.slot,scheduledDate:schedule?.date,id:id(),name:template?.name ?? "Freies Training",date,started:now.getTime(),duration:null,status:"active",
       exercises:template ? structuredClone(template.exercises).map(item=>({
         ...item,id:id(),replacedFrom:undefined,
         sets:item.sets.map(set=>({...set,id:id(),completed:false,rpe:null,rir:null}))
