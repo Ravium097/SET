@@ -1,3 +1,4 @@
+import { tr } from "../i18n/runtime";
 import { db, exerciseSchema, type Exercise } from "../data";
 import {
   exerciseCatalog,
@@ -24,6 +25,8 @@ export function matchesExercise(exercise: Exercise, query: string) {
       entry?.name ?? "",
       exercise.muscle,
       exercise.equipment,
+      tr(exercise.muscle),
+      tr(exercise.equipment),
       ...(entry?.aliases ?? []),
     ].join(" "),
   );

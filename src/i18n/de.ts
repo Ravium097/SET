@@ -1,3 +1,4 @@
+import { tr } from "./runtime";
 export const de = {
   themeTitle: "Darstellung",
   dark: "Dunkel",
@@ -16,12 +17,12 @@ export const de = {
   preferenceError:
     "Die Einstellung konnte nicht dauerhaft gespeichert werden. Sie gilt vorerst nur bis zum Neuladen.",
 } as const;
-export const t = (key: keyof typeof de): string => de[key];
+export const t = (key: keyof typeof de): string => tr(de[key]);
 export function germanError(error: unknown): string {
   const message = error instanceof Error ? error.message : "";
-  if (message === "Name und Datum fehlen") return message;
+  if (message === "Name und Datum fehlen") return tr(message);
   if (message === "Backup ist zu groß")
-    return "Die Sicherungsdatei ist zu groß (maximal 20 MB).";
+    return tr("Die Sicherungsdatei ist zu groß (maximal 20 MB).");
   if (
     error instanceof Error &&
     (error.name === "ZodError" || error.name === "SyntaxError")

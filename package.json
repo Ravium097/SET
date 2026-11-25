@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:pwa": "npm run build && node scripts/check-pwa-update.cjs",
     "test:ui": "npm run build && node scripts/check-ui.cjs",
-    "test:nutrition": "node scripts/check-nutrition.cjs"
+    "test:nutrition": "node scripts/check-nutrition.cjs",
+    "test:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@zxing/browser": "^0.2.1",

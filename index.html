@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
     />
-    <style>html,body{margin:0;background:var(--bg,#111111);}html{color-scheme:dark;}</style>
+    <style>html,body{margin:0;background:var(--bg,var(--startup-bg,#101113));}html{color-scheme:dark;}</style>
     <meta name="theme-color" content="#111111" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <script>
@@ -21,6 +21,7 @@
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme === "midnight" ? "dark" : "light";
         document.documentElement.style.backgroundColor = colors[theme];
+        document.documentElement.style.setProperty("--startup-bg",colors[theme]);
         document.querySelector('meta[name="theme-color"]').content = colors[theme];
         document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content = theme === "midnight" ? "black" : "default";
       })();
@@ -33,12 +34,20 @@
 <title>BASE. · Training & Tagebuch</title>
   </head>
   <body>
-    <div id="root"><main style="font:16px -apple-system,sans-serif;color:var(--ink,#f5f5f5);background:var(--bg,#111111);padding:32px;min-height:100vh">
+    <div id="root"><main style="font:16px -apple-system,sans-serif;color:var(--ink,#f5f5f5);background:var(--bg,var(--startup-bg,#101113));padding:32px;min-height:100vh">
       <h1>BASE.</h1><p id="startup-status" role="status">Deine Trainings werden geladen …</p>
-      <p>Bleibt diese Meldung stehen? Schließe andere BASE.-Fenster und öffne die Starthilfe. Deine Trainings werden nicht gelöscht.</p>
-      <a href="/recovery.html" style="color:inherit;text-decoration:underline">Starthilfe öffnen</a>
+      <p id="startup-help">Bleibt diese Meldung stehen? Schließe andere BASE.-Fenster und öffne die Starthilfe. Deine Trainings werden nicht gelöscht.</p>
+      <a id="startup-recovery" href="/recovery.html" style="color:inherit;text-decoration:underline">Starthilfe öffnen</a>
       <noscript>Bitte aktiviere JavaScript für BASE..</noscript>
     </main></div>
+    <script>
+      try { if(localStorage.getItem('base-language')==='en') {
+        document.documentElement.lang='en'; document.title='BASE. · Training & Diary';
+        document.getElementById('startup-status').textContent='Loading your workouts …';
+        document.getElementById('startup-help').textContent='Still seeing this message? Close other BASE. windows and open the recovery page. Your workouts will not be deleted.';
+        document.getElementById('startup-recovery').textContent='Open recovery page';
+      }} catch (_) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

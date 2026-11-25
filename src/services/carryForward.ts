@@ -1,3 +1,4 @@
+import { tr } from "../i18n/runtime";
 import { db, emptySet, id, isCompletedWork, type Workout } from "../data";
 import { previousPerformance } from "./previousPerformance";
 
@@ -23,7 +24,7 @@ export async function startWorkout(template?: Workout, schedule?: {slot: string;
     if(active) return active;
     const now=new Date();
     const date=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
-    const fresh:Workout={templateId:template?.id || undefined,scheduledSlot:schedule?.slot,scheduledDate:schedule?.date,id:id(),name:template?.name ?? "Freies Training",date,started:now.getTime(),duration:null,status:"active",
+    const fresh:Workout={templateId:template?.id || undefined,scheduledSlot:schedule?.slot,scheduledDate:schedule?.date,id:id(),name:template?.name ?? tr("Freies Training"),date,started:now.getTime(),duration:null,status:"active",
       exercises:template ? structuredClone(template.exercises).map(item=>({
         ...item,id:id(),replacedFrom:undefined,
         sets:item.sets.map(set=>({...set,id:id(),completed:false,rpe:null,rir:null}))

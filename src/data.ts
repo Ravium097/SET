@@ -159,6 +159,7 @@ export type TrainingPlan = z.infer<typeof trainingPlanSchema>;
 export type ScheduleSlot = z.infer<typeof scheduleSlotSchema>;
 export type WidgetLayout = z.infer<typeof widgetLayoutSchema>;
 export const settingsSchema = z.object({
+  language: z.enum(["de", "en"]).optional(),
   dashboardLayout: widgetLayoutSchema.optional(),
   trainingPlans: z.array(trainingPlanSchema).optional(),
   activeTrainingPlan: z.string().optional(),
