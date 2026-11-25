@@ -39,6 +39,9 @@ export const workoutSchema = z.object({
   duration: z.number().nonnegative().nullable(),
   status: z.enum(["active", "completed", "template"]),
   exercises: z.array(itemSchema),
+  templateId: z.string().optional(),
+  scheduledSlot: z.string().optional(),
+  scheduledDate: z.string().optional(),
 });
 const nutrientFields = {
   kcal: z.number().nonnegative().finite().optional(),
@@ -148,7 +151,17 @@ export const nutritionDefaults: NutritionPreferences = {
   showDrinkTotal: true,
 };
 export const dashboardWidgetIds = ["training", "body", "activity", "volume", "weekly", "nutrition"] as const;
+export const widgetKinds = [...dashboardWidgetIds, "next", "today", "split", "completion", "records", "recent", "progress", "rest", "quick", "notes"] as const;
+export const widgetLayoutSchema = z.array(z.object({id:z.string(),kind:z.enum(widgetKinds),size:z.enum(["small","medium","large"]),hidden:z.boolean()})).max(50);
+export const scheduleSlotSchema = z.object({id:z.string(),templateId:z.string().optional(),name:z.string().min(1)});
+export const trainingPlanSchema = z.object({id:z.string(),name:z.string().min(1),days:z.array(z.array(scheduleSlotSchema)).length(7),overrides:z.record(z.string(),z.array(scheduleSlotSchema))});
+export type TrainingPlan = z.infer<typeof trainingPlanSchema>;
+export type ScheduleSlot = z.infer<typeof scheduleSlotSchema>;
+export type WidgetLayout = z.infer<typeof widgetLayoutSchema>;
 export const settingsSchema = z.object({
+  dashboardLayout: widgetLayoutSchema.optional(),
+  trainingPlans: z.array(trainingPlanSchema).optional(),
+  activeTrainingPlan: z.string().optional(),
   dashboardWidgets: z.array(z.enum(dashboardWidgetIds)).max(6).refine(v=>new Set(v).size===v.length).optional(),
   id: z.literal("settings"),
   nutrition: z.boolean().optional(),

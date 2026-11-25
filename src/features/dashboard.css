@@ -50,3 +50,30 @@
 .widget-customize label { display:flex; align-items:center; gap:12px; min-height:44px; margin:0; color:var(--ink); }
 .widget-customize input { width:20px; height:20px; min-height:20px; margin:0; accent-color:var(--ink); }
 @media(max-width:360px) { .widget { padding:16px; border-radius:20px; } .widget-training,.widget-body { min-height:176px; } .activity-months { gap:12px; } .activity-dots { gap:3px; } .widget-volume > strong { font-size:25px; padding-left:12px; } }
+/* Modular controls inherit the existing BASE surfaces and typography. */
+.widget-summary { gap:12px; min-height:184px; height:100%; }
+.widget-summary p { margin:0; }
+.widget-summary textarea { width:100%; min-height:100px; resize:vertical; }
+.widget-cell { transition:opacity .18s,transform .18s; }
+.widget-cell.size-large > .widget { min-height:380px; }
+.widget-cell.size-small .activity-month:not(:last-child) { display:none; }
+.widget-cell.size-small .activity-months { grid-template-columns:1fr; }
+.widget-cell.size-small .widget-weekly > div { grid-template-columns:1fr; }
+.widget-cell.size-small .widget-volume,.widget-cell.size-small .widget-diary-values { flex-direction:column; align-items:flex-start; }
+.widget-cell.size-small .widget-volume > strong { padding:0; border:0; }
+.widget-cell.size-small .widget-summary p:nth-of-type(n+3),.widget-cell.size-small .widget-summary > a:nth-of-type(n+3) { display:none; }
+.widget-cell.size-medium .widget-summary p:nth-of-type(n+5) { display:none; }
+.widget-edit-controls { display:flex; flex-wrap:wrap; gap:4px; padding:8px 0; }
+.widget-edit-controls button,.widget-edit-controls select { min-height:44px; margin:0; font-size:12px; max-width:100%; }
+.widget-drag { touch-action:none; cursor:grab; min-width:44px; }
+.is-hidden > .widget { opacity:.35; }
+.dragging { opacity:.6; transform:scale(.98); }
+.planner-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.planner-day { padding:16px 0; border-top:1px solid var(--line); }
+.planner-slot { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.planner-slot span { flex:1; overflow-wrap:anywhere; }
+.widget-gallery { display:grid; gap:24px; }
+.gallery-preview { pointer-events:none; }
+.gallery-preview .widget { min-height:184px; }
+@media(prefers-reduced-motion:reduce) { .widget-cell { transition:none; } }
+.widget-content { display:contents; }
