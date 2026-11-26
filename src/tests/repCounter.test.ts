@@ -24,3 +24,29 @@ it('never bridges face loss, large pose shifts, partial motions or frame gaps',(
  expect(run(new PushUpCounter(calibration),[...hold(face(.1)),...hold(face(.145)),...hold(face(.1))])).toBe(0);
  const counter=new PushUpCounter(calibration);run(counter,[...hold(face(.1)),...hold(face(.2))]);expect(run(counter,hold(face(.1)),5000)).toBe(0);
 });
+
+it('counts continuous movements without requiring pauses at either endpoint',()=>{
+ const values=[...hold(face(.1),8),...Array.from({length:81},(_,i)=>face(.1+.1*(1-Math.cos(i/16*2*Math.PI))/2)),...hold(face(.1),4)];
+ expect(run(new PushUpCounter(calibration),values)).toBe(5);
+});
+it('counts continuous movements at uneven camera frame intervals',()=>{
+ const counter=new PushUpCounter(calibration);let count=0;
+ for(let time=0;time<=9000;time+=time%3===0?125:90){
+  const scale=time<800?.1:.1+.1*(1-Math.cos((time-800)/1600*2*Math.PI))/2;
+  if(counter.sample(face(scale),time))count++;
+ }
+ expect(count).toBe(5);
+});
+it('counts one-second cycles without endpoint holds',()=>{
+ const values=[...hold(face(.1),6),...Array.from({length:51},(_,i)=>face(.1+.1*(1-Math.cos(i/10*2*Math.PI))/2)),...hold(face(.1),3)];
+ expect(run(new PushUpCounter(calibration),values)).toBe(5);
+});
+it('keeps the upper position armed through a recovery pause',()=>{
+ expect(run(new PushUpCounter(calibration),[...hold(face(.1),140),...hold(face(.2)),...hold(face(.1))])).toBe(1);
+});
+it('rejects isolated distance spikes and exposes lost alignment',()=>{
+ const counter=new PushUpCounter(calibration);
+ expect(run(counter,[...hold(face(.1)),face(.2),...hold(face(.1))])).toBe(0);
+ counter.sample(face(.2,{yaw:.8}),4000);expect(counter.guidance).toBe('alignment');
+ counter.sample(undefined,4100);expect(counter.guidance).toBe('face');
+});

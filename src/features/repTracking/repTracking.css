@@ -3,5 +3,5 @@
 .rep-tracker-controls button { margin:0; font-size:14px; }
 .rep-tracker-controls output { font-variant-numeric:tabular-nums; font-weight:600; }
 .rep-tracker small { display:block; margin-top:8px; color:var(--muted); font-size:12px; }
-.rep-tracker-video { display:block; width:112px; max-width:100%; height:112px; object-fit:cover; border-radius:var(--button-radius); margin-top:8px; transform:scaleX(-1); filter:grayscale(1); }
+.rep-tracker-video { display:block; width:112px; max-width:100%; height:112px; object-fit:contain; border-radius:var(--button-radius); margin-top:8px; transform:scaleX(-1); filter:grayscale(1); }
 .rep-tracker-video[hidden] { display:none; }

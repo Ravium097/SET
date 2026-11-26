@@ -4,9 +4,16 @@ import { tr } from '../../i18n/runtime';
 import { PushUpCounter,stableSample,validCalibration,type FaceSample } from './counter';
 import './repTracking.css';
 type Stage='off'|'loading'|'top'|'top-hold'|'bottom'|'bottom-hold'|'tracking';
+const guidanceText={
+ 'seek-top':'Zur oberen kalibrierten Position zurückkehren.',
+ top:'Obere Position erkannt · jetzt absenken.',
+ bottom:'Untere Position erkannt · jetzt nach oben.',
+ alignment:'Kopfposition verändert · zur kalibrierten Ausrichtung zurückkehren.',
+ face:'Gesicht nicht vollständig sichtbar · Zählung pausiert'
+} as const;
 type Props={value:number|null;onReps:(value:number)=>void;stopRef:MutableRefObject<(()=>void)|null>};
 export function PushUpRepTracker({value,onReps,stopRef}:Props){
- const [stage,setStage]=useState<Stage>('off'),[message,setMessage]=useState(''),[visible,setVisible]=useState(false),[count,setCount]=useState(0);
+ const [stage,setStage]=useState<Stage>('off'),[message,setMessage]=useState(''),[visible,setVisible]=useState(false),[count,setCount]=useState(0),[guidance,setGuidance]=useState<keyof typeof guidanceText>('seek-top');
  const video=useRef<HTMLVideoElement>(null),epoch=useRef(0),phase=useRef<Stage>('off');
  const resources=useRef<{stream?:MediaStream;model?:FaceLandmarker;frame?:number}>({});
  const latest=useRef({value,onReps});latest.current={value,onReps};
@@ -66,7 +73,7 @@ export function PushUpRepTracker({value,onReps,stopRef}:Props){
        else if(samples.current.length>=8&&time-samples.current[0].time>=800){
         const stable=stableSample(samples.current.map(sample=>sample.face));
         if(stable&&phase.current==='top-hold'){top.current=stable;samples.current=[];transition('bottom');}
-        else if(stable&&top.current&&validCalibration(top.current,stable)){counter.current=new PushUpCounter({top:top.current,bottom:stable});samples.current=[];transition('tracking');setMessage('');}
+        else if(stable&&top.current&&validCalibration(top.current,stable)){counter.current=new PushUpCounter({top:top.current,bottom:stable});samples.current=[];transition('tracking');setGuidance('seek-top');setMessage('');}
         else if(stable&&phase.current==='bottom-hold'){samples.current=[];transition('bottom');setMessage('Abstandsänderung zu klein oder Kopfposition verändert. Bitte neu ansetzen.');}
        }
       }else if(phase.current==='tracking'){
@@ -76,6 +83,7 @@ export function PushUpRepTracker({value,onReps,stopRef}:Props){
         if(counter.current?.sample(face,time)){
          const next=++repetitions.current;lastEmitted.current=next;setCount(next);latest.current.onReps(next);
         }
+        setGuidance(counter.current?.guidance??'seek-top');
        }
       }
      }
@@ -99,7 +107,7 @@ export function PushUpRepTracker({value,onReps,stopRef}:Props){
   {stage==='loading'&&<small role="status">{tr('Kamera und lokales Modell werden vorbereitet …')}</small>}
   {(stage==='top'||stage==='bottom')&&<small>{tr(stage==='top'?'Kamera ruhig platzieren. Gesicht in der oberen Position zur Kamera ausrichten.':'Jetzt die untere Position halten und kalibrieren.')}</small>}
   {(stage==='top-hold'||stage==='bottom-hold')&&<small role="status">{tr('Position ruhig halten …')}</small>}
-  {stage==='tracking'&&<small>{tr(visible?'Erkennung aktiv · nur vollständige Bewegungen':'Gesicht nicht vollständig sichtbar · Zählung pausiert')}</small>}
+  {stage==='tracking'&&<small>{tr(guidanceText[guidance])}</small>}
   {stage!=='off'&&<small>{tr('Abstandsschätzung, keine Prüfung der Übungsausführung.')}</small>}
   {stage!=='off'&&<small>{tr('Nur lokal. Keine Aufnahmen. Wiederholungen bleiben manuell korrigierbar.')}</small>}
   {message&&<small role="status">{tr(message)}</small>}

@@ -87,3 +87,27 @@ the installed PWA: permission accept/deny, both calibrations, several complete
 cycles plus partial/jitter movements, corrections, Stop, completion, switching
 exercises, leaving focus, backgrounding/locking, offline reuse and a fresh start.
 Compare counts manually; do not assume laboratory accuracy from synthetic tests.
+
+## Continuous-motion correction
+
+The original fixed smoothing and three-frame endpoint holds missed natural
+continuous cycles in synthetic regression tests (three of five counted at a
+1.6-second cadence). The counter now uses time-based smoothing and two
+consecutive endpoint samples spanning at least 60 ms. A confirmed upper endpoint
+arms the next repetition without a second acquisition delay. Hysteresis, minimum
+cycle duration, face/pose checks and gap resets remain in place. An intentional
+upper-position pause does not expire the next movement.
+
+The existing status line now reports the detected upper/lower phase or a face /
+alignment problem, instead of claiming recognition is active while cycles reset.
+Synthetic cadence tests cover one-second and 1.6-second movements and uneven
+frame timing. These demonstrate a software regression fix, not measured real
+camera accuracy. Real iPhone verification remains outstanding.
+
+A reported “face not fully visible” state also led to a framing correction: the
+preview now contains the whole camera frame instead of cropping it. The sample
+filter accepts a hairline/chin at the frame edge while still requiring visible
+eyes and nose, finite landmarks and a valid pose matrix. Detector confidence uses
+MediaPipe's 0.5 defaults rather than the original stricter 0.7 thresholds. Stable
+calibration and full-cycle checks remain mandatory. These changes do not make an
+occluded or absent face detectable; front-camera placement still matters.

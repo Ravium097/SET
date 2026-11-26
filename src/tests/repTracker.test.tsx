@@ -36,7 +36,7 @@ it('calibrates, counts from zero instead of a carried-over target, and accepts m
  fireEvent.click(screen.getByText('Track Reps'));await waitFor(()=>expect(create).toHaveBeenCalled());await frames(.1,1);
  fireEvent.click(screen.getByText('Oben kalibrieren'));await frames(.1,12);
  fireEvent.click(screen.getByText('Unten kalibrieren'));await frames(.2,12);await screen.findByLabelText('Automatisch erkannte Wiederholungen');
- await frames(.1);expect(update).not.toHaveBeenCalled();await frames(.2);await frames(.1);expect(update).toHaveBeenLastCalledWith(1);
+ await frames(.1);expect(update).not.toHaveBeenCalled();expect(screen.getByText('Obere Position erkannt · jetzt absenken.')).toBeTruthy();await frames(.2);expect(screen.getByText('Untere Position erkannt · jetzt nach oben.')).toBeTruthy();await frames(.1);expect(update).toHaveBeenLastCalledWith(1);
  view.rerender(<PushUpRepTracker value={1} onReps={update} stopRef={stopRef}/>);
  view.rerender(<PushUpRepTracker value={7} onReps={update} stopRef={stopRef}/>);await frames(.1);await frames(.2);await frames(.1);expect(update).toHaveBeenLastCalledWith(8);
  view.rerender(<PushUpRepTracker value={8} onReps={update} stopRef={stopRef}/>);

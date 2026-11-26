@@ -639,5 +639,9 @@
   "Manuelle Eingabe · Erkennung pausiert": "Manual input · tracking paused",
   "Erkennung nicht verfügbar. Bitte Wiederholungen manuell eingeben.": "Tracking unavailable. Please enter reps manually.",
   "Kein Kamerazugriff. Die manuelle Eingabe bleibt verfügbar.": "Camera access denied. Manual input remains available.",
-  "Abstandsschätzung, keine Prüfung der Übungsausführung.": "Distance estimate, not an exercise form check."
+  "Abstandsschätzung, keine Prüfung der Übungsausführung.": "Distance estimate, not an exercise form check.",
+  "Zur oberen kalibrierten Position zurückkehren.": "Return to the calibrated upper position.",
+  "Obere Position erkannt · jetzt absenken.": "Upper position detected · now lower down.",
+  "Untere Position erkannt · jetzt nach oben.": "Lower position detected · now move up.",
+  "Kopfposition verändert · zur kalibrierten Ausrichtung zurückkehren.": "Head position changed · return to the calibrated alignment."
 }
