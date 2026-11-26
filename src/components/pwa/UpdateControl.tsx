@@ -1,6 +1,8 @@
+import { db } from "../../data";
+import { hasUnsavedThemeRisk, saveReloadView } from "../../services/themeSync";
 import { tr } from "../../i18n/runtime";
 import { useEffect, useState } from "react";
-export const RELEASE = "BASE. 3.0 · Fokus & Körper 08";
+export const RELEASE = "BASE. 3.1 · Refinement";
 let registrationPromise: Promise<ServiceWorkerRegistration> | undefined;
 function registration() {
     return (registrationPromise ??= navigator.serviceWorker
@@ -98,17 +100,23 @@ export function UpdateControl({ compact = false }: {
     async function reload() {
         if (!confirm(tr("BASE. neu laden? Beende zuerst deine aktuelle Eingabe und warte auf \u201EGespeichert\u201C. Gespeicherte Trainings bleiben erhalten.")))
             return;
+        if(await db.workouts.where('status').equals('active').count()){
+            setMessage('Training fortsetzen');return;
+        }
+        if(hasUnsavedThemeRisk()){
+            setMessage('BASE. neu laden? Beende zuerst deine aktuelle Eingabe und warte auf „Gespeichert“. Gespeicherte Trainings bleiben erhalten.');return;
+        }
         const r = await navigator.serviceWorker?.getRegistration();
         if (r?.waiting) {
-            const controller = () => {
+            const controller = async () => {
                 navigator.serviceWorker.removeEventListener("controllerchange", controller);
-                location.reload();
+                if(await db.workouts.where('status').equals('active').count()||hasUnsavedThemeRisk())return;
+                saveReloadView();location.reload();
             };
             navigator.serviceWorker.addEventListener("controllerchange", controller);
             r.waiting.postMessage({ type: "SKIP_WAITING" });
         }
-        else
-            location.reload();
+        else {saveReloadView();location.reload();}
     }
     if (compact && !ready)
         return null;

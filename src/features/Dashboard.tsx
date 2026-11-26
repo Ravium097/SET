@@ -1,7 +1,7 @@
 import { formatDay } from "../i18n/runtime";
 import { getLocale, getDateLocale } from "../i18n/runtime";
 import { tr } from "../i18n/runtime";
-import { useEffect, useState, useRef, type ReactNode } from "react";
+import { useEffect, useState, useRef, useMemo, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { addMonths, eachDayOfInterval, endOfMonth, format, startOfMonth, startOfWeek } from "date-fns";
@@ -54,6 +54,14 @@ export function Dashboard() {
     const [sessions, Sessions] = useState(false), [noteEditor, NoteEditor] = useState(false);
     const [planner, P] = useState(false), [gallery, G] = useState(false), [replace, R] = useState<string | null>(null);
     const [drag, Drag] = useState<string | null>(null);
+    const [previewSize,PreviewSize]=useState<WidgetLayout[number]['size']>('medium');
+    const moving=useRef<{id:string;x:number;y:number;started:boolean}|null>(null);
+    useEffect(()=>{
+      if(!drag)return;
+      let frame=0;
+      const scroll=()=>{const move=moving.current,main=document.querySelector('main');if(!move?.started||!main)return;const bounds=main.getBoundingClientRect(),edge=60;const delta=move.y<bounds.top+edge?-10:move.y>bounds.bottom-edge?10:0;if(delta)main.scrollTop+=delta;frame=requestAnimationFrame(scroll);};
+      frame=requestAnimationFrame(scroll);return()=>cancelAnimationFrame(frame);
+    },[drag]);
     const press = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const notes = useLiveQuery(() => db.dayNotes.get('training-notes'));
     const [customizing, C] = useState(false), [message, M] = useState("");
@@ -61,11 +69,12 @@ export function Dashboard() {
         document.getElementById("dashboard-widget-options")?.scrollIntoView?.({ block: "start", behavior: "smooth" }); }, [customizing]);
     const [now, Now] = useState(() => new Date());
     useEffect(() => { const refresh = () => Now(new Date()); const timer = setInterval(refresh, 30000); document.addEventListener('visibilitychange', refresh); return () => { clearInterval(timer); clearTimeout(press.current); document.removeEventListener('visibilitychange', refresh); }; }, []);
-    const data = dashboardData(workouts ?? [], now);
+    const currentDay=dateKey(now);
+    const data = useMemo(()=>dashboardData(workouts ?? [], now),[workouts,currentDay]);
     const layout = settings?.dashboardLayout ?? defaultLayout(settings?.dashboardWidgets);
     const enabled = layout.filter(w => !w.hidden).map(w => w.kind);
     const plan = settings?.trainingPlans?.find(p => p.id === settings.activeTrainingPlan) ?? settings?.trainingPlans?.[0];
-    const next = nextScheduled(plan, now, workouts ?? []), today = scheduledDay(plan, now, workouts ?? []), week = weekSchedule(plan, now, workouts ?? []);
+    const {next,today,week}=useMemo(()=>({next:nextScheduled(plan,now,workouts??[]),today:scheduledDay(plan,now,workouts??[]),week:weekSchedule(plan,now,workouts??[])}),[plan,workouts,currentDay]);
     async function saveLayout(next: WidgetLayout) { if (next.length > 50) {
         M("Maximal 50 Widgets möglich.");
         return;
@@ -109,12 +118,13 @@ export function Dashboard() {
         else
             await saveLayout([...layout, { id: id(), kind: key, size: 'medium', hidden: false }]);
     }
+    const records=useMemo(()=>{const records = new Map<string, number>();
+    data.completed.forEach(w => w.exercises.forEach(e => e.sets.filter(s => s.completed && s.type !== 'warmup' && s.weight !== null).forEach(s => records.set(e.name, Math.max(records.get(e.name) ?? 0, s.weight!)))));
+    return records;},[data.completed]);
     if (!workouts || !settings)
         return <p role="status">{tr("Tages\u00FCbersicht wird geladen \u2026")}</p>;
     const summary = (title: string, content: ReactNode, action: () => void, className = "") => <button className={`widget widget-summary widget-tap ${className}`} aria-label={title} onClick={action}><h2>{title}</h2>{content}</button>;
     const workoutButton = (slot: typeof today[number], date = dayKey(now)) => <button key={slot.id} disabled={slot.completed} onClick={() => void launch({ ...slot, date })}>{slot.completed ? "\u2713 " : ""}{slot.name}{!slot.completed ? tr(" starten") : ""}</button>;
-    const records = new Map<string, number>();
-    data.completed.forEach(w => w.exercises.forEach(e => e.sets.filter(s => s.completed && s.type !== 'warmup' && s.weight !== null).forEach(s => records.set(e.name, Math.max(records.get(e.name) ?? 0, s.weight!)))));
     const widgets: Record<WidgetId, ReactNode> = {
         next: summary(tr("N\u00E4chstes Training"), <div className="widget-next-details">{next ? <><strong>{next.name}</strong><small>{format(new Date(next.date + 'T12:00:00'), 'EEEE, d. MMMM', { locale: getDateLocale() })}</small></> : <p>{plan ? tr("Zeit f\u00FCr Erholung") : tr("Noch kein Wochenplan")}</p>}</div>, () => P(true), 'widget-next'),
         today: summary(tr("Heutiges Training"), today.length ? <><strong>{today.filter(s => s.completed).length}{" / "}{today.length}</strong><small>{today.map(s => s.name).join(' · ')}</small></> : <p>{tr("Ruhetag \u00B7 Erholung")}</p>, () => Sessions(true)),
@@ -140,21 +150,24 @@ export function Dashboard() {
     {sessions && <BottomSheet title={tr("Heutiges Training")} onClose={() => Sessions(false)}>{today.length ? today.map(s => workoutButton(s)) : <p>{tr("Heute ist Erholung geplant.")}</p>}<button onClick={() => { Sessions(false); P(true); }}>{tr("Wochenplan")}</button></BottomSheet>}
     {noteEditor && <BottomSheet title={tr("Trainingsnotizen")} onClose={() => NoteEditor(false)}><textarea aria-label={tr("Trainingsnotizen bearbeiten")} defaultValue={notes?.notes ?? ''} onChange={e => { void db.dayNotes.put({ id: 'training-notes', notes: e.target.value }).catch(() => M('Notiz konnte nicht gespeichert werden.')); }} placeholder={tr("Was m\u00F6chtest du festhalten?")}/></BottomSheet>}
     {planner && <WeeklyPlanner settings={settings} workouts={workouts} onClose={() => P(false)}/>}
-    {gallery && <BottomSheet title={tr("Widget-Galerie")} onClose={() => { G(false); R(null); }}><div className="widget-gallery">{widgetKinds.filter(k => k !== 'nutrition' || diaryEnabled).map(kind => <section key={kind}><h3>{tr(names[kind])}</h3><div className="gallery-preview" inert>{widgets[kind]}</div><button onClick={() => { if (replace)
-        change(replace, { kind });
+    {gallery && <BottomSheet title={tr("Widget-Galerie")} onClose={() => { G(false); R(null); }}><label>{tr("{0} Größe",[tr("Widget-Galerie")])}<select value={previewSize} onChange={e=>PreviewSize(e.target.value as WidgetLayout[number]['size'])}><option value="small">{tr("Klein · 1×1")}</option><option value="medium">{tr("Mittel · 2×1")}</option><option value="large">{tr("Groß · 2×2")}</option></select></label><div className="widget-gallery">{widgetKinds.filter(k => k !== 'nutrition' || diaryEnabled).map(kind => <section key={kind}><h3>{tr(names[kind])}</h3><div className={`gallery-preview widget-cell size-${previewSize}`} inert><div className="widget-content">{widgets[kind]}</div></div><button onClick={() => { if (replace)
+        change(replace, { kind, size:previewSize });
     else
-        void saveLayout([...layout, { id: id(), kind, size: 'medium', hidden: false }]); G(false); R(null); }}>{replace ? tr("Ersetzen") : tr("Hinzuf\u00FCgen")}</button></section>)}</div></BottomSheet>}
+        void saveLayout([...layout, { id: id(), kind, size: previewSize, hidden: false }]); G(false); R(null); }}>{replace ? tr("Ersetzen") : tr("Hinzuf\u00FCgen")}</button></section>)}</div></BottomSheet>}
     <div className="dashboard-widget-grid">{layout.filter(w => (!w.hidden || customizing) && (w.kind !== 'nutrition' || diaryEnabled)).map(w => <div key={w.id} data-widget-id={w.id} className={`widget-cell ${w.size !== 'small' ? 'wide' : ''} size-${w.size} ${customizing ? 'editing' : ''} ${w.hidden ? 'is-hidden' : ''} ${drag === w.id ? 'dragging' : ''}`} onPointerDown={e => { if (!customizing && (e.target as HTMLElement).closest('button,input,textarea,select'))
             return; if (!customizing)
             press.current = setTimeout(() => C(true), 650); }} onPointerUp={() => clearTimeout(press.current)} onPointerMove={() => clearTimeout(press.current)} onPointerCancel={() => clearTimeout(press.current)} onClickCapture={e => { if (!customizing && press.current) {
             clearTimeout(press.current);
         } }} onContextMenu={e => { e.preventDefault(); C(true); }}>
-    {customizing && <div className="widget-edit-controls"><button className="widget-drag" aria-label={tr("{0} verschieben", [tr(names[w.kind])])} onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); Drag(w.id); }} onPointerMove={e => { if (drag !== w.id)
-            return; const edge = 70; if (e.clientY < edge)
-            window.scrollBy(0, -12);
-        else if (e.clientY > window.innerHeight - edge)
-            window.scrollBy(0, 12); }} onPointerUp={e => { const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-widget-id]')?.dataset.widgetId; if (target)
-            void saveLayout(reorder(layout, w.id, target)); Drag(null); }} onPointerCancel={() => Drag(null)}>{"\u283F"}</button><select aria-label={tr("{0} Gr\u00F6\u00DFe", [tr(names[w.kind])])} value={w.size} onChange={e => change(w.id, { size: e.target.value as WidgetLayout[number]['size'] })}><option value="small">{tr("Klein \u00B7 1\u00D71")}</option><option value="medium">{tr("Mittel \u00B7 2\u00D71")}</option><option value="large">{tr("Gro\u00DF \u00B7 2\u00D72")}</option></select><button aria-label={tr("{0} nach oben", [tr(names[w.kind])])} disabled={layout.findIndex(v => v.id === w.id) === 0} onClick={() => void saveLayout(reorder(layout, w.id, layout[layout.findIndex(v => v.id === w.id) - 1].id))}>{"\u2191"}</button><button aria-label={tr("{0} nach unten", [tr(names[w.kind])])} disabled={layout.findIndex(v => v.id === w.id) === layout.length - 1} onClick={() => void saveLayout(reorder(layout, w.id, layout[layout.findIndex(v => v.id === w.id) + 1].id))}>{"\u2193"}</button><button onClick={() => change(w.id, { hidden: !w.hidden })}>{w.hidden ? tr("Einblenden") : tr("Ausblenden")}</button><button onClick={() => { R(w.id); G(true); }}>{tr("Ersetzen")}</button><button onClick={() => void saveLayout(layout.filter(v => v.id !== w.id))}>{tr("Entfernen")}</button></div>}
+    {customizing && <div className="widget-edit-controls"><button className="widget-drag" aria-label={tr("{0} verschieben", [tr(names[w.kind])])} onPointerDown={e => { if(e.button!==0&&e.button!==undefined)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);moving.current={id:w.id,x:e.clientX,y:e.clientY,started:false}; }} onPointerMove={e => {
+        const move=moving.current;if(move?.id!==w.id)return;
+        if(!move.started&&Math.hypot(e.clientX-move.x,e.clientY-move.y)<8)return;
+        move.started=true;move.y=e.clientY;Drag(w.id);
+    }} onPointerUp={e=>{
+        const move=moving.current;
+        if(move?.id===w.id&&move.started){const target=document.elementFromPoint(e.clientX,e.clientY)?.closest<HTMLElement>('[data-widget-id]')?.dataset.widgetId;if(target)void saveLayout(reorder(layout,w.id,target));}
+        moving.current=null;Drag(null);
+    }} onPointerCancel={()=>{moving.current=null;Drag(null);}}>{"\u283F"}</button><select aria-label={tr("{0} Gr\u00F6\u00DFe", [tr(names[w.kind])])} value={w.size} onChange={e => change(w.id, { size: e.target.value as WidgetLayout[number]['size'] })}><option value="small">{tr("Klein \u00B7 1\u00D71")}</option><option value="medium">{tr("Mittel \u00B7 2\u00D71")}</option><option value="large">{tr("Gro\u00DF \u00B7 2\u00D72")}</option></select><button aria-label={tr("{0} nach oben", [tr(names[w.kind])])} disabled={layout.findIndex(v => v.id === w.id) === 0} onClick={() => void saveLayout(reorder(layout, w.id, layout[layout.findIndex(v => v.id === w.id) - 1].id))}>{"\u2191"}</button><button aria-label={tr("{0} nach unten", [tr(names[w.kind])])} disabled={layout.findIndex(v => v.id === w.id) === layout.length - 1} onClick={() => void saveLayout(reorder(layout, w.id, layout[layout.findIndex(v => v.id === w.id) + 1].id))}>{"\u2193"}</button><button onClick={() => change(w.id, { hidden: !w.hidden })}>{w.hidden ? tr("Einblenden") : tr("Ausblenden")}</button><button onClick={() => { R(w.id);PreviewSize(w.size); G(true); }}>{tr("Ersetzen")}</button><button onClick={() => void saveLayout(layout.filter(v => v.id !== w.id))}>{tr("Entfernen")}</button></div>}
     <div className="widget-content" inert={customizing}>{w.hidden ? <div className="widget"><h2>{tr(names[w.kind])}</h2><small>{tr("Ausgeblendet")}</small></div> : widgets[w.kind]}</div></div>)}<button className="widget widget-add" onClick={() => { C(true); G(true); }} aria-label={tr("Widget hinzuf\u00FCgen")}><Plus size={38}/><small>{tr("Widgets anpassen")}</small></button></div>
   </div>;
 }

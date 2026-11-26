@@ -337,7 +337,7 @@ export async function exportData() {
     ],
     async () => ({
       schemaVersion: 2 as const,
-      appVersion: "3.0.0",
+      appVersion: "3.1.0",
       nutrition: await db.nutrition.toArray(),
       foods: await db.foods.toArray(),
       dayNotes: await db.dayNotes.toArray(),
@@ -361,6 +361,16 @@ export async function restore(raw: unknown) {
   ])
     if (new Set(rows.map((x) => x.id)).size !== rows.length)
       throw Error("Doppelte IDs");
+  // Nested IDs are React/editor identities too; reject collisions before any clear.
+  for(const workout of b.workouts){
+    const itemIds=workout.exercises.map(item=>item.id);
+    const setIds=workout.exercises.flatMap(item=>item.sets.map(set=>set.id));
+    if(new Set(itemIds).size!==itemIds.length||new Set(setIds).size!==setIds.length)throw Error("Doppelte IDs");
+  }
+  const layout=b.settings.dashboardLayout??[];
+  const plans=b.settings.trainingPlans??[];
+  if(new Set(layout.map(widget=>widget.id)).size!==layout.length||new Set(plans.map(plan=>plan.id)).size!==plans.length)throw Error("Doppelte IDs");
+  for(const plan of plans)for(const slots of [...plan.days,...Object.values(plan.overrides)])if(new Set(slots.map(slot=>slot.id)).size!==slots.length)throw Error("Doppelte IDs");
   if (b.workouts.filter((w) => w.status === "active").length > 1)
     throw Error("Mehrere aktive Workouts");
   await db.transaction(

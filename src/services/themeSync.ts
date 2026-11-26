@@ -49,8 +49,7 @@ export async function reloadIOSThemeOnce(target:ResolvedTheme,bootTheme:Resolved
   const settings=await db.settings.get('settings');
   if(!settings||resolveTheme(settings.theme??readStartupTheme(),window.matchMedia('(prefers-color-scheme: dark)').matches)!==target)return false;
   if(options.isCurrent&&!options.isCurrent()||hasUnsavedThemeRisk()||document.visibilityState!=='visible')return false;
-  const main=document.querySelector('main');
-  sessionStorage.setItem(viewKey,JSON.stringify({url:location.pathname+location.search+location.hash,x:main?.scrollLeft??0,y:main?.scrollTop??0,expires:Date.now()+60000}));
+  if(!saveReloadView())return false;
   sessionStorage.setItem(markerKey,JSON.stringify({target,boot:bootTheme}));
   (options.reload??(()=>location.reload()))();return true;
  }catch{return false;}
@@ -68,4 +67,8 @@ export function restoreThemeView():boolean {
   const restore=()=>{if(stopped)return;main.scrollLeft=saved.x;main.scrollTop=saved.y;if(main.scrollTop>=saved.y||Date.now()>end){stop();return;}requestAnimationFrame(restore);};
   requestAnimationFrame(restore);return true;
  }catch{return false;}
+}
+
+export function saveReloadView():boolean {
+ try {const main=document.querySelector('main');sessionStorage.setItem(viewKey,JSON.stringify({url:location.pathname+location.search+location.hash,x:main?.scrollLeft??0,y:main?.scrollTop??0,expires:Date.now()+60000}));return true;}catch{return false;}
 }

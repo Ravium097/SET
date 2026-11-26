@@ -7,6 +7,7 @@ import { db, init } from '../data';
 import { Dashboard } from '../features/Dashboard';
 import { dayKey } from '../features/planner';
 beforeEach(async()=>{
+ Object.defineProperty(window,'PointerEvent',{configurable:true,value:MouseEvent});
  for(const t of db.tables)await t.clear();await init();
  HTMLDialogElement.prototype.showModal=function(){this.open=true;};HTMLDialogElement.prototype.close=function(){this.open=false;};
 });
@@ -52,7 +53,7 @@ it('reorders cards with pointer drag and drop and persists the result',async()=>
  const target=document.querySelector('[data-widget-id="body"]')!;
  Object.defineProperty(document,'elementFromPoint',{configurable:true,value:()=>target});
  const handle=screen.getByRole('button',{name:'Training verschieben'});
- fireEvent.pointerDown(handle,{pointerId:1,clientX:20,clientY:20});fireEvent.pointerUp(handle,{pointerId:1,clientX:200,clientY:200});
+ fireEvent.pointerDown(handle,{pointerId:1,clientX:20,clientY:20});fireEvent.pointerMove(handle,{pointerId:1,clientX:200,clientY:200});fireEvent.pointerUp(handle,{pointerId:1,clientX:200,clientY:200});
  await waitFor(async()=>expect((await db.settings.get('settings'))?.dashboardLayout?.[1].kind).toBe('training'));expect(capture).toHaveBeenCalled();
 });
 it('adds a live gallery widget, replaces it and removes it independently',async()=>{
@@ -79,4 +80,18 @@ it('opens notes for editing from a compact widget and saves locally',async()=>{
  open();fireEvent.click(await screen.findByRole('button',{name:'Trainingsnotizen'}));
  fireEvent.change(screen.getByLabelText('Trainingsnotizen bearbeiten'),{target:{value:'Technik ruhig ausführen'}});
  await waitFor(async()=>expect((await db.dayNotes.get('training-notes'))?.notes).toBe('Technik ruhig ausführen'));
+});
+it('does not move a widget when the handle is only tapped',async()=>{
+ HTMLElement.prototype.setPointerCapture=vi.fn();open();fireEvent.click(await screen.findByRole('button',{name:'Dashboard anpassen'}));
+ const handle=screen.getByRole('button',{name:'Training verschieben'});Object.defineProperty(document,'elementFromPoint',{configurable:true,value:()=>document.querySelector('[data-widget-id="body"]')});
+ fireEvent.pointerDown(handle,{pointerId:1,clientX:20,clientY:20});fireEvent.pointerMove(handle,{pointerId:1,clientX:22,clientY:22});fireEvent.pointerUp(handle,{pointerId:1,clientX:22,clientY:22});
+ expect((await db.settings.get('settings'))?.dashboardLayout).toBeUndefined();
+});
+it('previews and saves the selected gallery size',async()=>{
+ open();fireEvent.click(await screen.findByRole('button',{name:'Widget hinzufügen'}));
+ fireEvent.change(screen.getByLabelText('Widget-Galerie Größe'),{target:{value:'large'}});
+ expect(document.querySelector('.gallery-preview.size-large')).toBeTruthy();
+ const section=screen.getByRole('heading',{name:'Nächstes Training',level:3}).parentElement!;
+ fireEvent.click(section.querySelector(':scope > button')!);
+ await waitFor(async()=>expect((await db.settings.get('settings'))?.dashboardLayout?.at(-1)).toMatchObject({kind:'next',size:'large'}));
 });

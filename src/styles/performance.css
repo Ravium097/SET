@@ -93,3 +93,15 @@ input[type="checkbox"] { min-height:24px; }
 @media(prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none !important; } }
 #root { height:var(--app-height, 100dvh); }
 .progress-tabs a { flex-direction:row; }
+/* BASE. 3.1 — technical viewport and consistency refinements, same palette/tokens. */
+#root { height:var(--app-height,100dvh); }
+main { scroll-padding-block:16px 32px; scrollbar-width:none; }
+main::-webkit-scrollbar,.bottom-sheet::-webkit-scrollbar,.food-tabs::-webkit-scrollbar { display:none; width:0; height:0; }
+.bottom-sheet,.food-tabs { scrollbar-width:none; }
+.bottom-sheet { max-height:calc(100vh - env(safe-area-inset-top,0px) - 12px); max-height:calc(var(--app-height,100dvh) - env(safe-area-inset-top,0px) - 12px); }
+.progress-tabs,.segmented,.diary-switch { display:flex; gap:4px; padding:4px; margin:0 0 24px; border:0; border-radius:16px; background:var(--surface-alt); }
+.progress-tabs a,.segmented button,.diary-switch button { display:flex; align-items:center; justify-content:center; flex:1; min-width:0; min-height:44px; margin:0; padding:10px 4px; border-radius:12px; font-size:14px; font-weight:600; color:var(--muted); background:transparent; }
+.progress-tabs a[aria-current="page"],.segmented button[aria-pressed="true"],.diary-switch button[aria-pressed="true"] { background:var(--surface); color:var(--ink); }
+.training-screen .training-section-heading { margin:16px 0 8px; }
+.training-screen .personal-templates { margin-bottom:8px; }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none!important; animation:none!important; scroll-behavior:auto!important; } }

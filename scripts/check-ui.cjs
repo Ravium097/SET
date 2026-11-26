@@ -55,7 +55,7 @@ const origin = "http://127.0.0.1:4178";
         "/import",
       ]) {
         await page.goto(origin + route);
-        await page.locator("nav").waitFor();
+        await page.locator(".app-dock nav").waitFor();
         await page.evaluate(() => document.fonts.ready);
         const bounds = await page
           .locator("main")
@@ -64,11 +64,11 @@ const origin = "http://127.0.0.1:4178";
           bounds.scroll <= bounds.width,
           `Overflow ${route} ${viewport.width}`,
         );
-        const before = await page.locator("nav").boundingBox();
+        const before = await page.locator(".app-dock nav").boundingBox();
         await page
           .locator("main")
           .evaluate((e) => (e.scrollTop = e.scrollHeight));
-        const after = await page.locator("nav").boundingBox();
+        const after = await page.locator(".app-dock nav").boundingBox();
         assert(Math.abs(before.y - after.y) < 1, "Dock moved");
       }
       await page.close();
@@ -96,7 +96,7 @@ const origin = "http://127.0.0.1:4178";
       "22.5",
     );
     await page.getByRole("link", { name: "Training", exact: true }).click();
-    await page.getByRole("button", { name: "Starten", exact: true }).click();
+    await page.getByRole("button", { name: "QA Template starten", exact: true }).click();
     await page.getByRole("heading", { name: "Im Training" }).waitFor();
     for (const width of [320, 393, 820]) {
       await page.setViewportSize({width,height:852});
@@ -142,12 +142,13 @@ const origin = "http://127.0.0.1:4178";
     await page.getByRole("button", { name: "Training abschließen" }).click();
     await page.waitForURL("**/history");
     await page.getByRole("link", { name: /QA Template/ }).waitFor();
-    await page.goto(origin + "/stats");
+    await page.goto(origin + "/progress/muscles");
     await page.getByLabel('Muskelgruppen Vorderseite',{exact:true}).waitFor();
     await page.getByRole('button',{name:'Hinten',exact:true}).click();
     await page.getByLabel('Muskelgruppen Rückseite',{exact:true}).waitFor();
     await page.getByRole('button',{name:'Vorne',exact:true}).click();
 
+    await page.goto(origin + "/stats");
     await page.getByText("Trainingsvolumen", { exact: true }).waitFor();
     await page.goto(origin + "/settings");
     const downloading = page.waitForEvent("download");

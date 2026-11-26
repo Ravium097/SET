@@ -1,3 +1,4 @@
+import "./nutrition.css";
 import { tr } from "../../i18n/runtime";
 import { GoalsEditor } from "./Goals";
 import { useEffect, useState } from "react";

@@ -121,11 +121,18 @@ const server = http.createServer((req, res) => {
       const reg = await navigator.serviceWorker.getRegistration();
       await reg.update();
     });
-    await page.waitForFunction(
-      () => window.updateActivated,
-      {},
-      { timeout: 30000 },
-    );
+    const activatedEarly=await page.evaluate(async()=>{
+      const reg=await navigator.serviceWorker.getRegistration();
+      for(let n=0;n<600&&!reg.waiting;n++)await new Promise(resolve=>setTimeout(resolve,50));
+      if(!reg.waiting)throw new Error('Update did not reach waiting state');
+      const early=window.updateActivated;
+      await new Promise(resolve=>{
+        navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true});
+        reg.waiting.postMessage({type:'SKIP_WAITING'});
+      });
+      return early;
+    });
+    assert.equal(activatedEarly,false,'Update must wait for explicit activation');
     assert.equal(
       await page.getByText("Screenshot importieren").count(),
       1,
@@ -133,7 +140,7 @@ const server = http.createServer((req, res) => {
     );
     await page.reload();
     await page
-      .getByRole("heading", { name: /Dein Training/ })
+      .getByRole("heading", { name: /Übersicht/ })
       .waitFor();
     assert.equal(await page.getByText("Screenshot importieren").count(), 0);
     const readWorkout = () =>

@@ -11,7 +11,7 @@ export default defineConfig({
       registerType: "prompt",
       injectRegister: false,
       manifest: {
-        name: "BASE — Minimal Performance",
+        name: "BASE. 3.1 – Refinement",
         short_name: "BASE.",
         display: "standalone",
         start_url: "/",
@@ -30,7 +30,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallbackDenylist: [/^\/recovery\.html$/],
-        skipWaiting: true,
+        skipWaiting: false,
         clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
       },

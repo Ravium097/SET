@@ -4,7 +4,7 @@ import { tr } from "../i18n/runtime";
 import { PeriodFilter } from "../components/ui/PeriodFilter";
 import { Info } from "lucide-react";
 import { differenceInCalendarDays } from "date-fns";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../data";
@@ -14,11 +14,10 @@ export function MuscleMap() {
     const ws = useLiveQuery(() => db.workouts.toArray()) ?? [];
     const ex = useLiveQuery(() => db.exercises.toArray()) ?? [];
     const [period, setPeriod] = useState("7"), [side, setSide] = useState("front"), [selected, select] = useState("");
-    const days = period === "all" ? Math.max(1, ...ws.filter(w => w.status === "completed").map(w => differenceInCalendarDays(new Date(), new Date(w.date + "T12:00:00")) + 1)) : Number(period);
-    const rows = muscleData(ws, ex, days);
-    const totals = new Map<string, number>();
-    rows.forEach(r => totals.set(r.muscle, (totals.get(r.muscle) ?? 0) + r.sets));
-    const max = Math.max(1, ...totals.values());
+    const days = period === "all" ? ws.reduce((max,w)=>w.status==="completed"?Math.max(max,differenceInCalendarDays(new Date(),new Date(w.date+"T12:00:00"))+1):max,1) : Number(period);
+    const rows = useMemo(()=>muscleData(ws, ex, days),[ws,ex,days]);
+    const totals = useMemo(()=>{const totals=new Map<string,number>();rows.forEach(r=>totals.set(r.muscle,(totals.get(r.muscle)??0)+r.sets));return totals;},[rows]);
+    const max = Array.from(totals.values()).reduce((max,value)=>Math.max(max,value),1);
     return <article className="muscle-map"><h2>{tr("Muskelkarte")}</h2><p>{tr("Abgeschlossene Arbeitss\u00E4tze pro Muskelgruppe.")}</p>
     <PeriodFilter value={period} onChange={setPeriod}/>
     <div className="segmented" role="group" aria-label={tr("K\u00F6rperansicht")}>{[["front", "Vorne"], ["back", "Hinten"]].map(([value, label]) => <button key={value} aria-pressed={side === value} onClick={() => setSide(value)}>{tr(label)}</button>)}</div>

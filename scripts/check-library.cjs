@@ -7,7 +7,7 @@ const origin='http://127.0.0.1:4181';
  let ready=false;for(let n=0;n<50;n++){try{if((await fetch(origin)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}assert(ready);
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});
  try{
-  const context=await browser.newContext({viewport:{width:393,height:852}});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+  const context=await browser.newContext({viewport:{width:393,height:852}});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept().catch(()=>{}));
   await page.goto(origin+'/library');await page.getByText('Mehr Übungen & Geräte',{exact:true}).click();await page.getByRole('button',{name:'Übungsbibliothek erweitern'}).click();await page.getByText(/Übungen ergänzt/).waitFor();assert.equal(await page.locator('main > article').count(),169);
   await page.getByPlaceholder('Übung suchen',{exact:true}).fill('smith bench');await page.getByRole('heading',{name:'Bankdrücken an der Multipresse',exact:true}).waitFor();assert.equal(await page.locator('main > article').count(),1);
   await page.getByPlaceholder('Übung suchen',{exact:true}).fill('');await page.getByLabel('Gerät filtern').selectOption('Kettlebell');assert.equal(await page.locator('main > article').count(),4);

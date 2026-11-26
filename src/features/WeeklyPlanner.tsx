@@ -2,7 +2,7 @@ import { tr } from "../i18n/runtime";
 import { useState } from 'react';
 import { db, id, type Settings, type TrainingPlan, type Workout, type ScheduleSlot } from '../data';
 import { BottomSheet } from '../components/ui/BottomSheet';
-import { dayKey, weekdays, weekSchedule } from './planner';
+import { dayKey, weekdays, weekSchedule, postponeWorkout, scheduledDay } from './planner';
 export function WeeklyPlanner({ settings, workouts, onClose }: {
     settings: Settings;
     workouts: Workout[];
@@ -37,7 +37,7 @@ export function WeeklyPlanner({ settings, workouts, onClose }: {
  <label>{tr("Eigenes Training")}<input value={custom} onChange={e => C(e.target.value)} placeholder={tr("Trainingsname")}/></label>
  {(scope === 'weekly' ? weekdays : [weekdays[(new Date(date + 'T12:00:00').getDay() + 6) % 7]]).map((name, index) => {
                 const day = scope === 'weekly' ? index : (new Date(date + 'T12:00:00').getDay() + 6) % 7;
-                return <section className="planner-day" key={name}><h3>{tr(name)}</h3>{!slots(day).length && <p>{tr("Ruhetag \u00B7 Erholung")}</p>}{slots(day).map((slot, i) => <div key={slot.id} className="planner-slot"><span>{slot.name}</span><button aria-label={tr("{0} entfernen", [slot.name])} onClick={() => setSlots(day, slots(day).filter(s => s.id !== slot.id))}>{tr("Entfernen")}</button>{scope === 'weekly' && <select aria-label={tr("{0} verschieben", [slot.name])} value={day} onChange={e => { const target = Number(e.target.value); const days = plan.days.map(v => [...v]); days[day].splice(i, 1); days[target].push(slot); update({ ...plan, days }); }}>{weekdays.map((d, j) => <option key={d} value={j}>{tr(d)}</option>)}</select>}</div>)}
+                return <section className="planner-day" key={name}><h3>{tr(name)}</h3>{!slots(day).length && <p>{tr("Ruhetag \u00B7 Erholung")}</p>}{slots(day).map((slot, i) => <div key={slot.id} className="planner-slot"><span>{slot.name}</span><button aria-label={tr("{0} entfernen", [slot.name])} onClick={() => setSlots(day, slots(day).filter(s => s.id !== slot.id))}>{tr("Entfernen")}</button>{scope==='date'&&<label>{tr("Trainingsdatum")}<input type="date" aria-label={tr("{0} verschieben",[slot.name])} value={date} disabled={scheduledDay(plan,new Date(date+'T12:00:00'),workouts).find(s=>s.id===slot.id)?.completed} onChange={e=>{if(e.target.value)update(postponeWorkout(plan,date,slot.id,e.target.value));}}/></label>}{scope === 'weekly' && <select aria-label={tr("{0} verschieben", [slot.name])} value={day} onChange={e => { const target = Number(e.target.value); const days = plan.days.map(v => [...v]); days[day].splice(i, 1); days[target].push(slot); update({ ...plan, days }); }}>{weekdays.map((d, j) => <option key={d} value={j}>{tr(d)}</option>)}</select>}</div>)}
  <select aria-label={tr("Vorlage f\u00FCr {0}", [tr(name)])} value="" onChange={e => add(day, e.target.value)}><option value="" disabled>{tr("Vorlage hinzuf\u00FCgen")}</option>{workouts.filter(w => w.status === 'template').map(w => <option value={w.id} key={w.id}>{w.name}</option>)}</select><div className="planner-actions"><button disabled={!custom.trim()} onClick={() => add(day, '')}>{tr("Eigenes Training hinzuf\u00FCgen")}</button><button onClick={() => setSlots(day, [])}>{tr("Als Ruhetag planen")}</button></div></section>;
             })}
  <h3>{tr("Diese Woche")}</h3>{weekSchedule(plan, new Date(), workouts).map(d => <p key={d.date}>{tr(d.name)}{": "}{d.slots.length ? d.slots.map(s => `${s.completed ? '✓ ' : ''}${s.name}`).join(' · ') : tr("Erholung")}</p>)}</>}

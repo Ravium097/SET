@@ -7,15 +7,13 @@ import {
 } from "../catalog/exercises";
 const namesOf = (entry: (typeof exerciseCatalog)[number]) =>
   [entry.name, ...entry.aliases].map(normalizeExerciseName);
+const catalogById=new Map(exerciseCatalog.map(entry=>[catalogId(entry.key),entry]));
+const catalogByName=new Map<string,(typeof exerciseCatalog)[number]>();
+for(const entry of exerciseCatalog)for(const name of namesOf(entry)){
+  const key=entry.equipment+'\0'+name;if(!catalogByName.has(key))catalogByName.set(key,entry);
+}
 export function catalogMatch(exercise: Exercise) {
-  return (
-    exerciseCatalog.find((entry) => catalogId(entry.key) === exercise.id) ??
-    exerciseCatalog.find(
-      (entry) =>
-        entry.equipment === exercise.equipment &&
-        namesOf(entry).includes(normalizeExerciseName(exercise.name)),
-    )
-  );
+ return catalogById.get(exercise.id)??catalogByName.get(exercise.equipment+'\0'+normalizeExerciseName(exercise.name));
 }
 export function matchesExercise(exercise: Exercise, query: string) {
   const entry = catalogMatch(exercise);

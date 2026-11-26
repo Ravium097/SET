@@ -1,3 +1,5 @@
+import { finishWorkout } from "./services/finishWorkout";
+import { saveWorkoutEdit } from "./services/workoutEdits";
 import { restoreThemeView } from "./services/themeSync";
 import { formatDay } from "./i18n/runtime";
 import { LanguagePicker } from "./components/settings/LanguagePicker";
@@ -9,19 +11,21 @@ import { ActionMenu } from "./components/ui/ActionMenu";
 import { PeriodFilter } from "./components/ui/PeriodFilter";
 import { DateField } from "./components/ui/DateField";
 import { NutritionPreferencesForm, MealReminders } from "./features/nutrition/Preferences";
-import { Nutrition, Modules, DailyOverview } from "./features/nutrition/Nutrition";
+import { Modules } from "./components/settings/Modules";
 import { StartupBoundary } from "./components/pwa/StartupBoundary";
-import React, { useState, useEffect, useId } from "react";
+import React, { useState, useEffect, useId, useMemo, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useParams, useLocation, Link, } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Home, Play, Dumbbell, CalendarDays, Utensils, ChartNoAxesCombined, Settings as Gear, Plus, ArrowRight, StickyNote, } from "lucide-react";
 import { format, startOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, isSameDay, } from "date-fns";
 
-import { CartesianGrid, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, } from "recharts";
+
 import { db, init, id, defaults, emptySet, isCompletedWork, volume, count, exportData, restore, backupSchema, muscles, equipment, type Workout, type Item, type Exercise, } from "./data";
 import { ThemeStudio, useTheme } from "./features/ThemeStudio";
-import { MuscleMap } from "./features/MuscleMap";
+const MuscleMap=lazy(()=>import("./features/MuscleMap").then(module=>({default:module.MuscleMap})));
+const Stats=lazy(()=>import("./features/Statistics").then(module=>({default:module.Statistics})));
+const Nutrition=lazy(()=>import("./features/nutrition/Nutrition").then(module=>({default:module.Nutrition})));
 import { ExerciseSwap } from "./features/ExerciseSwap";
 import { movements, movementOf } from "./features/swap";
 import { LiveSummary } from "./features/LiveSummary";
@@ -60,22 +64,14 @@ function App() {
         };
         viewport?.addEventListener("resize", resize);
         window.addEventListener("focusout", resize);
+        window.addEventListener("resize",resize);
         resize();
-        return () => { viewport?.removeEventListener("resize", resize); window.removeEventListener("focusout", resize); };
+        return () => { viewport?.removeEventListener("resize", resize); window.removeEventListener("focusout", resize);window.removeEventListener("resize",resize); };
     }, []);
     const savedSettings = useLiveQuery(() => db.settings.get("settings"));
     const settings = savedSettings ?? defaults;
     useTheme(savedSettings?.theme,!!savedSettings,pathname);
     useEffect(() => {if(savedSettings)activateLanguage(savedSettings.language ?? "de");}, [savedSettings?.language, !!savedSettings]);
-    const [now, tick] = useState(Date.now());
-    useEffect(() => {
-        const t = setInterval(() => tick(Date.now()), 1000);
-        return () => clearInterval(t);
-    }, []);
-    const remaining = settings.paused ??
-        (settings.timerEnd
-            ? Math.max(0, Math.ceil((settings.timerEnd - Date.now()) / 1000))
-            : null);
     return (<>
       <main className={["/", "/training", "/history", "/stats", "/progress"].includes(pathname) ? "overview" : ""}>
         <header>
@@ -86,7 +82,7 @@ function App() {
         </header>
         <div className={pathname === "/settings" ? "update-panel" : "update-panel compact-update"}><UpdateControl compact={pathname !== "/settings"}/></div>
         <MealReminders />
-        <Routes>
+        <Suspense fallback={<p role="status">{tr("Laden …")}</p>}><Routes>
           <Route path="/" element={<Dashboard />}/>
           <Route path="/training" element={<Training />}/>
           <Route path="/workout/:wid" element={<Editor />}/>
@@ -98,24 +94,10 @@ function App() {
           <Route path="/nutrition" element={<Nutrition />}/>
           <Route path="/settings" element={<Settings />}/>
           <Route path="/import" element={<Navigate to="/training" replace/>}/>
-        </Routes>
+        </Routes></Suspense>
       </main>
       <footer className="app-dock">
-      {remaining !== null && (<aside className="timer">
-          <strong>
-            {remaining === 0
-                ? tr("Pause beendet") : tr("{0}:{1}", [Math.floor(remaining / 60), String(remaining % 60).padStart(2, "0")])}
-          </strong>
-          <button onClick={() => db.settings.update("settings", settings.paused !== null
-                ? { paused: null, timerEnd: Date.now() + remaining * 1000 }
-                : { paused: remaining, timerEnd: null })}>
-            {settings.paused !== null ? tr("Weiter") : tr("Pause")}
-          </button>
-          <button onClick={() => db.settings.update("settings", settings.paused !== null
-                ? { paused: remaining + 30 }
-                : { timerEnd: Date.now() + (remaining + 30) * 1000 })}>{tr("+30 s")}</button>
-          <button aria-label={tr("Pause beenden")} onClick={() => db.settings.update("settings", { paused: null, timerEnd: null })}>{"\u00D7"}</button>
-        </aside>)}
+      <RestTimer settings={settings}/>
       <nav aria-label={tr("Hauptnavigation")}>
         {[
             [Home, "/", "Start"],
@@ -132,6 +114,31 @@ function App() {
       </nav>
       </footer>
     </>);
+}
+function RestTimer({settings}:{settings:typeof defaults}) {
+    const [now,tick]=useState(Date.now());
+    useEffect(()=>{
+      if(!settings.timerEnd||settings.paused!==null)return;
+      tick(Date.now());const timer=setInterval(()=>tick(Date.now()),1000);
+      return()=>clearInterval(timer);
+    },[settings.timerEnd,settings.paused]);
+    const remaining=settings.paused??(settings.timerEnd?Math.max(0,Math.ceil((settings.timerEnd-now)/1000)):null);
+    return <>      {remaining !== null && (<aside className="timer">
+          <strong>
+            {remaining === 0
+                ? tr("Pause beendet") : tr("{0}:{1}", [Math.floor(remaining / 60), String(remaining % 60).padStart(2, "0")])}
+          </strong>
+          <button onClick={() => db.settings.update("settings", settings.paused !== null
+                ? { paused: null, timerEnd: Date.now() + remaining * 1000 }
+                : { paused: remaining, timerEnd: null })}>
+            {settings.paused !== null ? tr("Weiter") : tr("Pause")}
+          </button>
+          <button onClick={() => db.settings.update("settings", settings.paused !== null
+                ? { paused: remaining + 30 }
+                : { timerEnd: Date.now() + (remaining + 30) * 1000 })}>{tr("+30 s")}</button>
+          <button aria-label={tr("Pause beenden")} onClick={() => db.settings.update("settings", { paused: null, timerEnd: null })}>{"\u00D7"}</button>
+        </aside>)}
+</>;
 }
 function Progress({ section = "overview" }: {
     section?: "overview" | "history" | "muscles";
@@ -173,6 +180,7 @@ function WorkoutExerciseHeading({ item, exercise, }: {
 }) {
     const fieldId = useId();
     const [open, setOpen] = useState(false);
+    const [noteError,setNoteError]=useState("");
     const [draft, setDraft] = useState<{
         text: string;
         saved: boolean;
@@ -200,18 +208,16 @@ function WorkoutExerciseHeading({ item, exercise, }: {
       </summary>
       {exercise && (<textarea id={fieldId} className="exercise-note" hidden={!open} aria-label={tr("Notiz zu {0}", [item.name])} placeholder={tr("Notiz \u2026")} rows={3} value={draft?.text ?? exercise.notes} onChange={(event) => {
                 const edit = { text: event.target.value, saved: false };
-                setDraft(edit);
+                setDraft(edit);setNoteError("");
                 db.exercises
                     .update(exercise.id, { notes: edit.text })
-                    .then(() => {
+                    .then(updated => {
+                    if(!updated)throw new Error("Exercise no longer exists");
                     setDraft((current) => current === edit ? { ...edit, saved: true } : current);
                 })
-                    .catch((e: unknown) => {
-                    const status = document.getElementById("startup-status");
-                    if (status)
-                        status.textContent=tr("Start fehlgeschlagen ({0}). Deine Trainings bleiben gespeichert. Öffne die Starthilfe.",[e instanceof Error?e.name:tr("Unbekannt")]);
-                });
+                    .catch((e: unknown) => {setNoteError(germanError(e));});
             }}/>)}
+      {noteError&&<p role="alert">{noteError}</p>}
     </>);
 }
 function WorkoutFields({ w, save, focus = false, }: {
@@ -361,8 +367,7 @@ function Editor() {
     if (!w)
         return <p>{tr("Workout wird geladen \u2026")}</p>;
     const save = (next: Workout) => {
-        db.workouts
-            .put(next)
+        saveWorkoutEdit(w,next)
             .then(() => setMsg("Gespeichert"))
             .catch((e) => setMsg(germanError(e)));
     };
@@ -385,20 +390,8 @@ function Editor() {
                 if (!w.name.trim() || !w.date)
                     return error(Error("Name und Datum fehlen"));
                 if (confirm(tr("Training abschlie\u00DFen? {0} \u00DCbungen, {1} S\u00E4tze, {2} kg.", [w.exercises.length, count(w), fmt(volume(w))]))) {
-                    await db.transaction("rw", db.workouts, db.settings, async () => {
-                        await db.workouts.put({
-                            ...w,
-                            status: "completed",
-                            duration: w.started
-                                ? Math.floor((Date.now() - w.started) / 1000)
-                                : null,
-                        });
-                        await db.settings.update("settings", {
-                            timerEnd: null,
-                            paused: null,
-                        });
-                    });
-                    nav("/history");
+                    try {await finishWorkout(w.id);nav("/history");}
+                catch(cause){error(cause);}
                 }
             }}>{tr("Training abschlie\u00DFen")}</button>)}
       <button onClick={async () => {
@@ -489,6 +482,7 @@ function Library() {
 function History() {
     const [month, Month] = useState(new Date()), [selected, Select] = useState(day());
     const ws = useLiveQuery(() => db.workouts.where("status").equals("completed").toArray()) ?? [];
+    const byDate=useMemo(()=>{const dates=new Map<string,Workout[]>();for(const w of ws){const list=dates.get(w.date)??[];list.push(w);dates.set(w.date,list);}return dates;},[ws]);
     const days = eachDayOfInterval({
         start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
         end: endOfMonth(month),
@@ -505,7 +499,7 @@ function History() {
           {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((x) => (<small key={x}>{tr(x)}</small>))}
           {days.map((d) => (<button className={`${d.getMonth() !== month.getMonth() ? "outside-month" : ""} ${selected === day(d) ? "selected" : ""} ${isSameDay(d, new Date()) ? "today" : ""}`} key={day(d)} onClick={() => Select(day(d))}>
               {format(d, "d")}
-              <small>{ws.some((w) => w.date === day(d)) ? "\u25CF" : " "}</small>
+              <small>{byDate.has(day(d)) ? "\u25CF" : " "}</small>
             </button>))}
         </div>
       </article>
@@ -514,100 +508,12 @@ function History() {
             locale: getDateLocale(),
         })}
       </h2>
-      {ws
-            .filter((w) => w.date === selected)
+      {(byDate.get(selected)??[])
             .map((w) => (<WorkoutCard key={w.id} w={w}/>))}
-      {!ws.some((w) => w.date === selected) && (<p>{tr("Kein Training.")}</p>)}
+      {!byDate.has(selected) && (<p>{tr("Kein Training.")}</p>)}
     </>);
 }
-function Stats() {
-    const ws = useLiveQuery(() => db.workouts.where("status").equals("completed").toArray()) ?? [];
-    const [range, R] = useState("90"), [exercise, E] = useState(""), [bucket, B] = useState("week");
-    const filtered = ws
-        .filter((w) => range === "all" ||
-        new Date(w.date).getTime() >= Date.now() - Number(range) * 86400000)
-        .sort((a, b) => a.date.localeCompare(b.date));
-    const groups = new Map<string, {
-        date: string;
-        volume: number;
-        workouts: number;
-    }>();
-    filtered.forEach((w) => {
-        const d = new Date(w.date + "T12:00:00");
-        const key = day(bucket === "week" ? startOfWeek(d, { weekStartsOn: 1 }) : startOfMonth(d));
-        const g = groups.get(key) ?? { date: key, volume: 0, workouts: 0 };
-        g.volume += volume(w);
-        g.workouts++;
-        groups.set(key, g);
-    });
-    const names = [...new Set(ws.flatMap((w) => w.exercises.map((e) => e.name)))];
-    const selected = exercise || names[0];
-    const sets = filtered.flatMap((w) => w.exercises
-        .filter((e) => e.name === selected)
-        .flatMap((e) => e.sets.filter(isCompletedWork)));
-    const strength = filtered.flatMap((w) => {
-        const weights = w.exercises
-            .filter((e) => e.name === selected)
-            .flatMap((e) => e.sets
-            .filter((s) => isCompletedWork(s) && s.weight !== null)
-            .map((s) => s.weight!));
-        return weights.length
-            ? [{ date: w.date, weight: Math.max(...weights) }]
-            : [];
-    });
-    if (!filtered.length)
-        return <><PeriodFilter value={range} onChange={R}/><div className="metrics"><article><b>{"0"}</b><small>{tr("Workouts")}</small></article><article><b>{"0"}</b><small>{tr("Volumen \u00B7 kg")}</small></article></div><article className="empty"><ChartNoAxesCombined size={32}/><h2>{tr("Noch keine Trainingsdaten")}</h2><p>{tr("Volumen, H\u00E4ufigkeit, Kraftentwicklung und Rekorde erscheinen nach deinem ersten abgeschlossenen Workout im gew\u00E4hlten Zeitraum.")}</p><Link className="button primary" to="/training">{tr("Zum Training")}</Link></article></>;
-    return (<>
 
-      <PeriodFilter value={range} onChange={R}/>
-      <div className="metrics">
-        <article>
-          <b>{filtered.length}</b>
-          <small>{tr("Trainings")}</small>
-        </article>
-        <article>
-          <b>{fmt(filtered.reduce((s, w) => s + volume(w), 0))}</b>
-          <small>{tr("Volumen \u00B7 kg")}</small>
-        </article>
-      </div>
-      <select value={bucket} onChange={(e) => B(e.target.value)}>
-        <option value="week">{tr("Pro Woche")}</option>
-        <option value="month">{tr("Pro Monat")}</option>
-      </select>
-      {(["volume", "workouts"] as const).map((key) => (<article key={key}>
-          <h2>
-            {key === "volume" ? tr("Trainingsvolumen") : tr("Trainingsh\u00E4ufigkeit")}
-          </h2>
-          {groups.size ? (<ResponsiveContainer width="100%" height={220}>
-              <BarChart data={[...groups.values()]}>
-                <CartesianGrid vertical={false} stroke="var(--line)"/><XAxis dataKey="date" tickFormatter={d => new Date(d + "T12:00:00").toLocaleDateString(getLocale(),{day:"2-digit",month:"2-digit"})} tick={{ fontSize: 12 }} axisLine={false} tickLine={false}/>
-                <YAxis width={52} allowDecimals={key !== "workouts"} tickFormatter={fmt} axisLine={false} tickLine={false}/>
-                <Tooltip contentStyle={{ background: "var(--surface)", borderColor: "var(--line)", color: "var(--ink)" }}/>
-                <Bar name={tr(key === "volume" ? "Trainingsvolumen (kg)" : "Trainings")} dataKey={key} fill="var(--ink)" radius={[4, 4, 0, 0]}/>
-              </BarChart>
-            </ResponsiveContainer>) : (<p>{tr("Deine Diagramme entstehen mit deinem ersten Training.")}</p>)}
-        </article>))}
-      <article>
-        <h2>{tr("Kraftentwicklung")}</h2>
-        <select value={selected ?? ""} onChange={(e) => E(e.target.value)}>
-          {names.map((n) => (<option key={n}>{n}</option>))}
-        </select>
-        {strength.length ? (<ResponsiveContainer width="100%" height={220}>
-            <LineChart data={strength}>
-              <CartesianGrid vertical={false} stroke="var(--line)"/><XAxis dataKey="date" tickFormatter={d => new Date(d + "T12:00:00").toLocaleDateString(getLocale(),{day:"2-digit",month:"2-digit"})} tick={{ fontSize: 12 }} axisLine={false} tickLine={false}/>
-              <YAxis />
-              <Tooltip contentStyle={{ background: "var(--surface)", borderColor: "var(--line)", color: "var(--ink)" }}/>
-              <Line type="linear" name={tr("Gewicht (kg)")} dataKey="weight" stroke="var(--ink)"/>
-            </LineChart>
-          </ResponsiveContainer>) : (<p>{tr("Noch keine abgeschlossenen gewichteten S\u00E4tze.")}</p>)}
-        <h3>{tr("Pers\u00F6nliche Rekorde \u00B7 gew\u00E4hlter Zeitraum")}</h3>
-        {sets.length ? (<p>
-            {fmt(Math.max(...sets.map((s) => s.weight ?? 0)))}{tr(" kg \u00B7")}{" "}
-            {Math.max(...sets.map((s) => s.reps ?? 0))}{tr(" Wdh. \u00B7")}{" "}
-            {fmt(Math.max(...sets.map((s) => (s.weight ?? 0) * (s.reps ?? 0))))}{" "}{tr("kg Satzvolumen")}</p>) : (<p>{tr("Noch keine Rekorde.")}</p>)}
-      </article>
-    </>);
-}
 function Settings() {
     const s = useLiveQuery(() => db.settings.get("settings"));
     if (!s)

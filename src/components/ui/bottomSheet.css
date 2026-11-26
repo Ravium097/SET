@@ -1,0 +1,12 @@
+.bottom-sheet { position:fixed; inset:auto 0 0; margin:0 auto; width:100%; max-width:680px; max-height:min(92dvh,var(--app-height,92dvh)); padding:8px 20px calc(24px + env(safe-area-inset-bottom)); border:0; border-radius:24px 24px 0 0; background:var(--bg); color:var(--ink); overflow:auto; overscroll-behavior:contain; animation:sheet-in 180ms ease-out; }
+.bottom-sheet::backdrop { background:rgb(0 0 0 / .55); }
+.sheet-handle { width:36px; height:4px; border-radius:4px; background:var(--muted); opacity:.45; margin:4px auto 8px; }
+.sheet-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.sheet-heading h2 { margin:8px 0 16px; }
+.sheet-heading > button { flex:none; }
+.bottom-sheet input, .bottom-sheet select { width:100%; min-width:0; }
+.bottom-sheet details { padding:12px; }
+.bottom-sheet summary { min-height:44px; }
+.bottom-sheet .context-menu:not([open]) { padding:0; }
+@keyframes sheet-in { from { transform:translateY(24px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .bottom-sheet { animation:none; } }
