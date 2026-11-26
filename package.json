@@ -12,9 +12,12 @@
     "test:pwa": "npm run build && node scripts/check-pwa-update.cjs",
     "test:ui": "npm run build && node scripts/check-ui.cjs",
     "test:nutrition": "node scripts/check-nutrition.cjs",
-    "test:i18n": "node scripts/check-i18n.mjs"
+    "test:i18n": "node scripts/check-i18n.mjs",
+    "prebuild": "node scripts/prepare-rep-model.mjs",
+    "predev": "node scripts/prepare-rep-model.mjs"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.2.3",
     "@zxing/browser": "^0.2.1",
     "date-fns": "^4.0.0",
     "dexie": "^4.0.0",

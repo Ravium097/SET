@@ -1,3 +1,5 @@
+import { PushUpRepTracker } from "./features/repTracking/PushUpRepTracker";
+import { isPushUp } from "./features/repTracking/counter";
 import { finishWorkout } from "./services/finishWorkout";
 import { saveWorkoutEdit } from "./services/workoutEdits";
 import { restoreThemeView } from "./services/themeSync";
@@ -13,7 +15,7 @@ import { DateField } from "./components/ui/DateField";
 import { NutritionPreferencesForm, MealReminders } from "./features/nutrition/Preferences";
 import { Modules } from "./components/settings/Modules";
 import { StartupBoundary } from "./components/pwa/StartupBoundary";
-import React, { useState, useEffect, useId, useMemo, lazy, Suspense } from "react";
+import React, { useState, useEffect, useId, useMemo, useRef, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useParams, useLocation, Link, } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -233,6 +235,7 @@ function WorkoutFields({ w, save, focus = false, }: {
     const savedHistory = useLiveQuery<Workout[]>(() => w.status === "active" ? db.workouts.where("status").equals("completed").toArray() : Promise.resolve([]), [w.status]);
     const history = savedHistory ?? [];
     const rowFocus = setFocus(w);
+    const repTrackerStop=useRef<(()=>void)|null>(null);
     const nextExercise = w.exercises.find(e => e.sets.some(s => s.id === rowFocus.next));
     useEffect(() => {
         if (!rowFocus.current)
@@ -278,10 +281,12 @@ function WorkoutFields({ w, save, focus = false, }: {
                   <span className="focus-set-label">{tr("Satz\u00A0")}</span>{s.type === "warmup" ? tr("W") : j + 1}
 
                 </button>
+                {focus&&w.status==='active'&&rowFocus.current===s.id&&isPushUp(e.name)&&<PushUpRepTracker key={w.id+e.id+s.id} value={s.reps} onReps={reps=>update({reps})} stopRef={repTrackerStop}/>}
                 <Numeric label={tr("Gewicht")} step={2.5} value={s.weight} onChange={(weight) => update({ weight })}/>
                 <Numeric label={tr("Wiederholungen")} step={1} value={s.reps} onChange={(reps) => update({ reps })}/>
                 <input aria-label={tr("Satz abgeschlossen")} type="checkbox" checked={s.completed} onChange={async (ev) => {
                             const completed = ev.target.checked;
+                            if(completed)repTrackerStop.current?.();
                             update({ completed });
                             const cfg = await db.settings.get("settings");
                             if (completed && w.status === "active" && cfg?.auto)
@@ -295,6 +300,7 @@ function WorkoutFields({ w, save, focus = false, }: {
                         }}/>
                 {focus && <button className="focus-complete primary" onClick={async () => {
                                 const completed = !s.completed;
+                                if(completed)repTrackerStop.current?.();
                                 update({ completed });
                                 const cfg = await db.settings.get("settings");
                                 if (completed && w.status === "active" && cfg?.auto)
