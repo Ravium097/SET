@@ -2,7 +2,7 @@ import { addDays, format, startOfWeek } from 'date-fns';
 import { type TrainingPlan, type Workout, type WidgetLayout, dashboardWidgetIds } from '../data';
 export const dayKey=(date:Date)=>format(date,'yyyy-MM-dd');
 export const weekdays=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
-export const defaultLayout=(enabled:readonly string[]=dashboardWidgetIds):WidgetLayout=>enabled.map(kind=>({id:kind,kind:kind as WidgetLayout[number]['kind'],size:['training','body'].includes(kind)?'small':'medium',hidden:false}));
+export const defaultLayout=(enabled:readonly string[]=dashboardWidgetIds):WidgetLayout=>enabled.filter(kind=>kind!=="nutrition").map(kind=>({id:kind,kind:kind as WidgetLayout[number]['kind'],size:['training','body'].includes(kind)?'small':'medium',hidden:false}));
 function completedByDate(history:Workout[]){const index=new Map<string,Workout[]>();for(const w of history){if(w.status!=='completed')continue;const day=index.get(w.date)??[];day.push(w);index.set(w.date,day);}return index;}
 export function scheduledDay(plan:TrainingPlan|undefined,date:Date,history:Workout[],index=completedByDate(history)) {
  const key=dayKey(date), slots=plan?(plan.overrides[key]??plan.days[(date.getDay()+6)%7]):[];

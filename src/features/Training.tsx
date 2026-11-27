@@ -8,7 +8,6 @@ import { db, id, type Workout } from '../data';
 import { startWorkout } from '../services/carryForward';
 import { germanError } from '../i18n/de';
 import { ActionMenu } from '../components/ui/ActionMenu';
-import { PersonalTemplates } from '../components/templates/PersonalTemplates';
 import { Onboarding } from '../components/onboarding/Onboarding';
 import { WeeklyPlanner } from './WeeklyPlanner';
 import './training.css';
@@ -55,7 +54,6 @@ export function Training() {
       </details>
       <button className="icon-button" aria-label={tr("Vorlage erstellen")} onClick={() => void createTemplate().catch(report)}><Plus size={20}/></button>
     </div>
-    <PersonalTemplates />
     <div className="training-template-list">
       {workouts.filter(workout => workout.status === 'template').map(workout => <article key={workout.id} className="template-card">
         <div className="training-template-copy"><h3>{workout.name}</h3><p>{workout.exercises.length}{tr(" \u00DCbungen")}</p></div>

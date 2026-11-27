@@ -10,9 +10,9 @@ function Location(){return <output aria-label="Route">{useLocation().pathname}</
 function open(){return render(<MemoryRouter initialEntries={['/training']}><Training/><Location/></MemoryRouter>);}
 beforeEach(async()=>{for(const t of db.tables)await t.clear();await init();await db.workouts.put(template);HTMLDialogElement.prototype.showModal=function(){this.open=true;};HTMLDialogElement.prototype.close=function(){this.open=false;};});
 afterEach(()=>{cleanup();vi.restoreAllMocks();});
-it('opens the existing weekly planner and keeps template groups',async()=>{
+it('opens the existing weekly planner without screenshot template imports',async()=>{
  open();const planner=await screen.findByRole('button',{name:/Trainingsplan/});await waitFor(()=>expect((planner as HTMLButtonElement).disabled).toBe(false));fireEvent.click(planner);
- await screen.findByRole('dialog',{name:'Wochenplan'});expect(screen.getByText('Drück- und Zugtraining')).toBeTruthy();
+ await screen.findByRole('dialog',{name:'Wochenplan'});expect(screen.queryByText('Drück- und Zugtraining')).toBeNull();
 });
 it('provides a library shortcut and a click-accessible explanation',async()=>{
  open();expect((await screen.findByRole('link',{name:/Übungsbibliothek/})).getAttribute('href')).toBe('/library');

@@ -1,5 +1,3 @@
-import { PushUpRepTracker } from "./features/repTracking/PushUpRepTracker";
-import { isPushUp } from "./features/repTracking/counter";
 import { finishWorkout } from "./services/finishWorkout";
 import { saveWorkoutEdit } from "./services/workoutEdits";
 import { restoreThemeView } from "./services/themeSync";
@@ -12,14 +10,12 @@ import { Dashboard } from "./features/Dashboard";
 import { ActionMenu } from "./components/ui/ActionMenu";
 import { PeriodFilter } from "./components/ui/PeriodFilter";
 import { DateField } from "./components/ui/DateField";
-import { NutritionPreferencesForm, MealReminders } from "./features/nutrition/Preferences";
-import { Modules } from "./components/settings/Modules";
 import { StartupBoundary } from "./components/pwa/StartupBoundary";
 import React, { useState, useEffect, useId, useMemo, useRef, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useParams, useLocation, Link, } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Home, Play, Dumbbell, CalendarDays, Utensils, ChartNoAxesCombined, Settings as Gear, Plus, ArrowRight, StickyNote, } from "lucide-react";
+import { Home, Play, Dumbbell, CalendarDays, ChartNoAxesCombined, Settings as Gear, Plus, ArrowRight, StickyNote, } from "lucide-react";
 import { format, startOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, isSameDay, } from "date-fns";
 
 
@@ -27,7 +23,6 @@ import { db, init, id, defaults, emptySet, isCompletedWork, volume, count, expor
 import { ThemeStudio, useTheme } from "./features/ThemeStudio";
 const MuscleMap=lazy(()=>import("./features/MuscleMap").then(module=>({default:module.MuscleMap})));
 const Stats=lazy(()=>import("./features/Statistics").then(module=>({default:module.Statistics})));
-const Nutrition=lazy(()=>import("./features/nutrition/Nutrition").then(module=>({default:module.Nutrition})));
 import { ExerciseSwap } from "./features/ExerciseSwap";
 import { movements, movementOf } from "./features/swap";
 import { LiveSummary } from "./features/LiveSummary";
@@ -83,7 +78,6 @@ function App() {
           </Link>
         </header>
         <div className={pathname === "/settings" ? "update-panel" : "update-panel compact-update"}><UpdateControl compact={pathname !== "/settings"}/></div>
-        <MealReminders />
         <Suspense fallback={<p role="status">{tr("Laden …")}</p>}><Routes>
           <Route path="/" element={<Dashboard />}/>
           <Route path="/training" element={<Training />}/>
@@ -93,9 +87,9 @@ function App() {
           <Route path="/progress" element={<Progress />}/>
           <Route path="/progress/muscles" element={<Progress section="muscles"/>}/>
           <Route path="/stats" element={<Progress />}/>
-          <Route path="/nutrition" element={<Nutrition />}/>
           <Route path="/settings" element={<Settings />}/>
           <Route path="/import" element={<Navigate to="/training" replace/>}/>
+          <Route path="*" element={<Navigate to="/" replace/>}/>
         </Routes></Suspense>
       </main>
       <footer className="app-dock">
@@ -105,7 +99,6 @@ function App() {
             [Home, "/", "Start"],
             [Dumbbell, "/training", "Training"],
             [ChartNoAxesCombined, "/progress", "Fortschritt"],
-            ...(settings.nutrition || settings.hydration ? [[Utensils, "/nutrition", "Tagebuch"]] : []),
         ].map(([Icon, to, label]) => {
             const C = Icon as typeof Home;
             return (<NavLink key={String(to)} to={String(to)} className={String(to) === "/progress" && ["/history", "/stats"].includes(pathname) ? "active" : undefined}>
@@ -235,7 +228,6 @@ function WorkoutFields({ w, save, focus = false, }: {
     const savedHistory = useLiveQuery<Workout[]>(() => w.status === "active" ? db.workouts.where("status").equals("completed").toArray() : Promise.resolve([]), [w.status]);
     const history = savedHistory ?? [];
     const rowFocus = setFocus(w);
-    const repTrackerStop=useRef<(()=>void)|null>(null);
     const nextExercise = w.exercises.find(e => e.sets.some(s => s.id === rowFocus.next));
     useEffect(() => {
         if (!rowFocus.current)
@@ -281,12 +273,10 @@ function WorkoutFields({ w, save, focus = false, }: {
                   <span className="focus-set-label">{tr("Satz\u00A0")}</span>{s.type === "warmup" ? tr("W") : j + 1}
 
                 </button>
-                {focus&&w.status==='active'&&rowFocus.current===s.id&&isPushUp(e.name)&&<PushUpRepTracker key={w.id+e.id+s.id} value={s.reps} onReps={reps=>update({reps})} stopRef={repTrackerStop}/>}
                 <Numeric label={tr("Gewicht")} step={2.5} value={s.weight} onChange={(weight) => update({ weight })}/>
                 <Numeric label={tr("Wiederholungen")} step={1} value={s.reps} onChange={(reps) => update({ reps })}/>
                 <input aria-label={tr("Satz abgeschlossen")} type="checkbox" checked={s.completed} onChange={async (ev) => {
                             const completed = ev.target.checked;
-                            if(completed)repTrackerStop.current?.();
                             update({ completed });
                             const cfg = await db.settings.get("settings");
                             if (completed && w.status === "active" && cfg?.auto)
@@ -300,7 +290,6 @@ function WorkoutFields({ w, save, focus = false, }: {
                         }}/>
                 {focus && <button className="focus-complete primary" onClick={async () => {
                                 const completed = !s.completed;
-                                if(completed)repTrackerStop.current?.();
                                 update({ completed });
                                 const cfg = await db.settings.get("settings");
                                 if (completed && w.status === "active" && cfg?.auto)
@@ -526,8 +515,7 @@ function Settings() {
         return <p>{tr("Einstellungen werden geladen \u2026")}</p>;
     return (<>
       <h1>{tr("Einstellungen")}</h1>
-      <LanguagePicker/><Modules settings={s}/>
-      {(s.nutrition || s.hydration) && <NutritionPreferencesForm settings={s}/>}
+      <LanguagePicker/>
       <ThemeStudio settings={s}/>
       <article>
         <h2>{tr("Pausentimer")}</h2>
@@ -574,14 +562,12 @@ function Settings() {
         </label>
         <p>{tr("Deine Daten bleiben auf diesem Ger\u00E4t. Gel\u00F6schte Browserdaten k\u00F6nnen nicht wiederhergestellt werden. Exportiere regelm\u00E4\u00DFig ein Backup.")}</p>
         <button onClick={async () => {
-            if (confirm(tr("Alle Trainingsdaten, \u00DCbungen, Ern\u00E4hrungseintr\u00E4ge, Fotos und Einstellungen unwiderruflich l\u00F6schen?"))) {
-                await db.transaction("rw", [db.workouts, db.exercises, db.settings, db.nutrition, db.foods, db.dayNotes], async () => {
+            if (confirm(tr("Alle Trainingsdaten, Übungen und Einstellungen unwiderruflich löschen? Archivierte Ernährungsdaten bleiben erhalten."))) {
+                await db.transaction("rw", [db.workouts, db.exercises, db.settings, db.dayNotes], async () => {
                     await db.workouts.clear();
                     await db.exercises.clear();
                     await db.settings.clear();
-                    await db.nutrition.clear();
-                    await db.foods.clear();
-                    await db.dayNotes.clear();
+                    await db.dayNotes.delete("training-notes");
                 });
                 await init();
             }

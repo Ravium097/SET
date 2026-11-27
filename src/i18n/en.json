@@ -643,5 +643,7 @@
   "Zur oberen kalibrierten Position zurückkehren.": "Return to the calibrated upper position.",
   "Obere Position erkannt · jetzt absenken.": "Upper position detected · now lower down.",
   "Untere Position erkannt · jetzt nach oben.": "Lower position detected · now move up.",
-  "Kopfposition verändert · zur kalibrierten Ausrichtung zurückkehren.": "Head position changed · return to the calibrated alignment."
+  "Kopfposition verändert · zur kalibrierten Ausrichtung zurückkehren.": "Head position changed · return to the calibrated alignment.",
+  "Keine gespeicherten Angaben": "No saved information",
+  "Alle Trainingsdaten, Übungen und Einstellungen unwiderruflich löschen? Archivierte Ernährungsdaten bleiben erhalten.": "Permanently delete all workouts, exercises and settings? Archived nutrition data will be kept."
 }

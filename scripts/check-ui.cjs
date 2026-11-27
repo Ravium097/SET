@@ -173,28 +173,10 @@ const origin = "http://127.0.0.1:4178";
     await page.goto(origin + "/history");
     await page.getByRole("link", { name: /QA Template/ }).waitFor();
     await page.goto(origin + "/training");
-    await page
-      .getByText("Drück- und Zugtraining", { exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Drück- und Zugtraining speichern" })
-      .click();
-    await page
-      .getByRole("heading", { name: "Drücktraining", exact: true })
-      .waitFor();
-    await page
-      .getByRole("heading", { name: "Zugtraining", exact: true })
-      .waitFor();
-    await page.reload();
-    await page
-      .getByRole("heading", { name: "Drücktraining", exact: true })
-      .waitFor();
-    assert.equal(
-      await page
-        .getByRole("heading", { name: "Drücktraining", exact: true })
-        .count(),
-      1,
-    );
+    assert.equal(await page.getByText("Drück- und Zugtraining", {exact:true}).count(), 0);
+    await page.goto(origin + "/nutrition");
+    await page.waitForURL(origin + "/");
+    assert.equal(await page.locator('.app-dock nav a').count(), 3);
     assert.equal(errors.length, 0, errors.join("\n"));
     console.log(
       "Flow PASS: template independence; comma input; plus; set completion; timer; reload; history; charts; backup export and restore (isolated profile).",

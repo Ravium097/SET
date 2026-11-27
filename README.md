@@ -1,5 +1,9 @@
 # BASE.
 
+Workout-Tracker: Plan. Train. Track. Progress.
+
+Aktueller Bereinigungsstand und Datenerhalt: [Back to Minimal Performance](docs/BASE-MINIMAL-PERFORMANCE.md). Tagebuch, Wassertracker, Scanner, Screenshot-Übernahme und Kamera-Push-up-Zähler sind entfernt; historische Ernährungsdaten bleiben im JSON-Backup erhalten.
+
 BASE. ist der neue Name von SET. Die bestehende URL, IndexedDB-Datenbank `SET` und lokalen Speicherschlüssel bleiben für den Datenerhalt unverändert. Alte SET-Backups können weiterhin importiert werden. Neue Exporte heißen `BASE-backup-…`. Neuinstallationen verwenden den Namen BASE.; bestehende iOS-Home-Bildschirm-Beschriftungen können den alten Namen behalten.
 
 Mobile-first Workout-PWA mit React, TypeScript, Vite, Tailwind, Dexie/IndexedDB, React Router, Recharts, date-fns. Monochrome Oberfläche; keine Accounts, Werbung oder vorbefüllte Trainingshistorie.

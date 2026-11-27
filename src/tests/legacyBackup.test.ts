@@ -1,7 +1,6 @@
 import "fake-indexeddb/auto";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { db, init, exportData, restore, type NutritionEntry } from "../data";
-import { searchFoods } from "../features/nutrition/service";
 beforeEach(async () => {
   for (const table of db.tables) await table.clear();
   await init();
@@ -59,30 +58,6 @@ it("rejects malformed nutrition before replacing any data", async () => {
     restore({ ...(await exportData()), nutrition: [{ ...entry, amount: -1 }] }),
   ).rejects.toThrow();
   expect(await db.nutrition.get(entry.id)).toEqual(entry);
-});
-it("caches API results and searches them offline", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          products: [
-            {
-              code: "12345678",
-              product_name: "Hafer",
-              nutriments: { "energy-kcal_100g": 360 },
-            },
-          ],
-        }),
-      }),
-  );
-  expect((await searchFoods("Hafer"))[0].kcal).toBe(360);
-  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(Error("offline")));
-  expect((await searchFoods("Hafer"))[0].name).toBe("Hafer");
-  await expect(searchFoods("missing")).rejects.toThrow("Offline");
-  vi.unstubAllGlobals();
 });
 it('roundtrips optional macronutrients without inventing values for older entries',async()=>{
  await db.nutrition.put({...entry,protein:12,carbs:40,fat:6});

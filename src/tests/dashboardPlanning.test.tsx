@@ -66,7 +66,7 @@ it('adds a live gallery widget, replaces it and removes it independently',async(
  const quick=screen.getByRole('heading',{name:'Schnellstart',level:3}).parentElement!;fireEvent.click(quick.querySelector(':scope > button')!);
  await waitFor(async()=>expect((await db.settings.get('settings'))?.dashboardLayout?.at(-1)?.kind).toBe('quick'));
  fireEvent.click([...document.querySelector('[data-widget-id]:last-of-type')!.querySelectorAll('button')].find(b=>b.textContent==='Entfernen')!);
- await waitFor(async()=>expect((await db.settings.get('settings'))?.dashboardLayout).toHaveLength(6));
+ await waitFor(async()=>expect((await db.settings.get('settings'))?.dashboardLayout).toHaveLength(5));
 });
 it('opens the plan by tapping its widget without extra card buttons',async()=>{
  await db.settings.update('settings',{dashboardLayout:[{id:'next',kind:'next',size:'small',hidden:false}]});

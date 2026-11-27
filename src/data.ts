@@ -150,6 +150,7 @@ export const nutritionDefaults: NutritionPreferences = {
   drinkName: "Wasser",
   showDrinkTotal: true,
 };
+// Legacy diary schemas/tables remain solely for lossless backup compatibility. No migration or deletion.
 export const dashboardWidgetIds = ["training", "body", "activity", "volume", "weekly", "nutrition"] as const;
 export const widgetKinds = [...dashboardWidgetIds, "next", "today", "split", "completion", "records", "recent", "progress", "rest", "quick", "notes"] as const;
 export const widgetLayoutSchema = z.array(z.object({id:z.string(),kind:z.enum(widgetKinds),size:z.enum(["small","medium","large"]),hidden:z.boolean()})).max(50);
