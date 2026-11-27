@@ -6,11 +6,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { addMonths, eachDayOfInterval, endOfMonth, format, startOfMonth, startOfWeek } from "date-fns";
 
-import { Plus, Play, SlidersHorizontal, Dumbbell, Utensils } from "lucide-react";
+import { Plus, Play, SlidersHorizontal, Dumbbell } from "lucide-react";
 import { db, dashboardWidgetIds, count, volume, type Workout, type WidgetLayout, widgetKinds, id } from "../data";
 import { Onboarding } from "../components/onboarding/Onboarding";
-import { dailyNutrients } from "./nutrition/Goals";
-import { localDay } from "./nutrition/service";
 import "./dashboard.css";
 import { defaultLayout, reorder, nextScheduled, scheduledDay, weekSchedule, dayKey } from './planner';
 import { WeeklyPlanner } from './WeeklyPlanner';
@@ -49,7 +47,6 @@ export function ActivityDots({ workouts, now }: {
 export function Dashboard() {
     const workouts = useLiveQuery(() => db.workouts.toArray());
     const settings = useLiveQuery(() => db.settings.get("settings"));
-    const entries = useLiveQuery(() => db.nutrition.where("date").equals(localDay()).toArray()) ?? [];
     const navigate = useNavigate();
     const [sessions, Sessions] = useState(false), [noteEditor, NoteEditor] = useState(false);
     const [planner, P] = useState(false), [gallery, G] = useState(false), [replace, R] = useState<string | null>(null);
@@ -71,7 +68,7 @@ export function Dashboard() {
     useEffect(() => { const refresh = () => Now(new Date()); const timer = setInterval(refresh, 30000); document.addEventListener('visibilitychange', refresh); return () => { clearInterval(timer); clearTimeout(press.current); document.removeEventListener('visibilitychange', refresh); }; }, []);
     const currentDay=dateKey(now);
     const data = useMemo(()=>dashboardData(workouts ?? [], now),[workouts,currentDay]);
-    const layout = settings?.dashboardLayout ?? defaultLayout(settings?.dashboardWidgets);
+    const layout = (settings?.dashboardLayout ?? defaultLayout(settings?.dashboardWidgets)).filter(w => w.kind !== "nutrition");
     const enabled = layout.filter(w => !w.hidden).map(w => w.kind);
     const plan = settings?.trainingPlans?.find(p => p.id === settings.activeTrainingPlan) ?? settings?.trainingPlans?.[0];
     const {next,today,week}=useMemo(()=>({next:nextScheduled(plan,now,workouts??[]),today:scheduledDay(plan,now,workouts??[]),week:weekSchedule(plan,now,workouts??[])}),[plan,workouts,currentDay]);
@@ -103,14 +100,10 @@ export function Dashboard() {
     catch {
         M('Training konnte nicht gestartet werden.');
     } }
-    const diaryEnabled = !!(settings?.nutrition || settings?.hydration);
     const weight = settings?.nutritionPreferences?.goals?.profile?.weight;
     const training = data.active ?? data.today[0];
     const planned = data.active?.exercises.flatMap(e => e.sets).filter(s => s.type !== "warmup").length ?? 0;
     const ring = data.active ? count(data.active) : data.today.length;
-    const daily = entries.filter(e => e.meal === "Getränke" ? settings?.hydration : settings?.nutrition);
-    const calories = dailyNutrients(daily, "kcal");
-    const showCalories = settings?.nutrition && settings.nutritionPreferences?.showNutrients !== false;
     async function toggle(key: WidgetId) {
         const existing = layout.find(w => w.kind === key);
         if (existing)
@@ -137,24 +130,24 @@ export function Dashboard() {
         quick: summary(tr("Schnellstart"), <><Play size={24}/><small>{tr("Vorlage w\u00E4hlen oder frei starten")}</small></>, () => navigate('/training')),
         notes: summary(tr("Trainingsnotizen"), <p>{notes?.notes || tr("Was m\u00F6chtest du festhalten?")}</p>, () => NoteEditor(true)),
         training: <Link className="widget widget-training" to={training ? `/workout/${training.id}` : "/training"}><div className="widget-top"><CountRing value={data.active ? <Play size={20}/> : ring} label={data.active ? tr("{0} von {1} Arbeitss\u00E4tzen abgeschlossen", [ring, planned]) : tr("{0} Trainings heute abgeschlossen", [ring])} progress={data.active ? (planned ? ring / planned : 0) : ring ? 1 : 0}/><Dumbbell size={18}/></div><div><h2>{training?.name ?? tr("Dein Training")}</h2><small>{data.active ? tr("Training fortsetzen") : data.today.length ? tr("{0} S\u00E4tze \u00B7 heute abgeschlossen", [count(data.today[0])]) : tr("Vorlage w\u00E4hlen oder frei starten")}</small></div></Link>,
-        body: <Link className="widget widget-body" to="/settings#nutrition-goals"><div className="widget-top"><strong className="widget-number">{weight === undefined ? "\u2013" : number(weight)}<small>{tr("kg")}</small></strong><SlidersHorizontal size={16}/></div><div><h2>{tr("K\u00F6rpergewicht")}</h2><small>{weight === undefined ? tr("Gewicht hinterlegen") : tr("Aus deinen gespeicherten Angaben")}</small></div></Link>,
+        body: <Link className="widget widget-body" to="/settings"><div className="widget-top"><strong className="widget-number">{weight === undefined ? "\u2013" : number(weight)}<small>{tr("kg")}</small></strong><SlidersHorizontal size={16}/></div><div><h2>{tr("K\u00F6rpergewicht")}</h2><small>{weight === undefined ? tr("Keine gespeicherten Angaben") : tr("Aus deinen gespeicherten Angaben")}</small></div></Link>,
         activity: <Link className="widget widget-activity widget-wide" to="/history"><ActivityDots workouts={data.completed} now={now}/><div className="activity-caption"><CountRing value={data.week.length} label={tr("{0} Trainings diese Woche", [data.week.length])} progress={data.week.length ? 1 : 0}/><div><h2>{data.completed[0]?.name ?? tr("Deine Trainingsaktivit\u00E4t")}</h2><small>{data.completed[0] ? tr("{0} Trainings diese Woche \u00B7 zuletzt {1}", [data.week.length, format(new Date(data.completed[0].date + "T12:00:00"), "d. MMMM", { locale: getDateLocale() })]) : tr("Dein Kalender f\u00FCllt sich mit deinen Trainings")}</small></div><SlidersHorizontal size={16}/></div></Link>,
         volume: <Link className="widget widget-volume widget-wide" to="/progress"><span><h2>{tr("Trainingsvolumen")}</h2><small>{tr("Letzte 7 Tage")}</small></span><strong>{number(data.lastSeven.reduce((sum, w) => sum + volume(w), 0))}<small>{tr("kg")}</small></strong></Link>,
         weekly: <Link className="widget widget-weekly widget-wide" to="/progress"><h2>{tr("Diese Woche")}</h2><div>{[[data.week.length, "Trainings"], [data.week.reduce((sum, w) => sum + count(w), 0), "Sätze"], [data.week.reduce((sum, w) => sum + w.exercises.length, 0), "Übungen"]].map(([n, label]) => <span key={label}><strong>{number(Number(n))}</strong><small>{tr(label)}</small></span>)}</div></Link>,
-        nutrition: <Link className="widget widget-diary widget-wide" to="/nutrition"><div className="widget-top"><Utensils size={20}/><Plus size={19}/></div><div className="widget-diary-values"><span><h2>{tr("Tagebuch")}</h2><small>{daily.length}{tr(" Eintr\u00E4ge heute")}</small></span>{showCalories && <span><strong>{calories.known || calories.complete ? number(calories.total) : "\u2013"}<small>{tr("kcal")}</small></strong><small>{calories.complete ? tr("Heute erfasst") : tr("Angaben unvollst\u00E4ndig")}</small></span>}</div></Link>,
+        nutrition: null,
     };
     return <div className="widget-dashboard"><div className="dashboard-heading"><div><p className="eyebrow">{format(now, "EEEE, d. MMMM", { locale: getDateLocale() })}</p><h1>{tr("\u00DCbersicht")}</h1></div><div className="dashboard-controls"><button aria-label={tr("Dashboard anpassen")} aria-expanded={customizing} onClick={() => C(!customizing)}><SlidersHorizontal size={20}/></button><Link className="button" aria-label={tr("Neues Training")} to="/training"><Plus size={24}/></Link></div></div>
-    {customizing && <section id="dashboard-widget-options" className="widget-customize" aria-label={tr("Dashboard anpassen")}><h2>{tr("Deine Widgets")}</h2><p>{tr("W\u00E4hle Widgets und Gr\u00F6\u00DFen. Zum Verschieben den Griff ziehen.")}</p>{widgetKinds.filter(key => key !== "nutrition" || diaryEnabled).map(key => <label key={key}><input type="checkbox" checked={enabled.includes(key)} onChange={() => { void toggle(key); }}/>{tr(names[key])}</label>)}<div className="planner-actions"><button aria-label={tr("Wochenplan \u00F6ffnen")} onClick={() => P(true)}>{tr("Wochenplan")}</button><button onClick={() => G(true)}>{tr("Widget-Galerie")}</button><button onClick={() => void saveLayout(defaultLayout())}>{tr("Standard wiederherstellen")}</button><button onClick={() => C(false)}>{tr("Fertig")}</button></div></section>}
+    {customizing && <section id="dashboard-widget-options" className="widget-customize" aria-label={tr("Dashboard anpassen")}><h2>{tr("Deine Widgets")}</h2><p>{tr("W\u00E4hle Widgets und Gr\u00F6\u00DFen. Zum Verschieben den Griff ziehen.")}</p>{widgetKinds.filter(key => key !== "nutrition").map(key => <label key={key}><input type="checkbox" checked={enabled.includes(key)} onChange={() => { void toggle(key); }}/>{tr(names[key])}</label>)}<div className="planner-actions"><button aria-label={tr("Wochenplan \u00F6ffnen")} onClick={() => P(true)}>{tr("Wochenplan")}</button><button onClick={() => G(true)}>{tr("Widget-Galerie")}</button><button onClick={() => void saveLayout(defaultLayout())}>{tr("Standard wiederherstellen")}</button><button onClick={() => C(false)}>{tr("Fertig")}</button></div></section>}
     {message && <p role="status">{tr(message)}</p>}
     {!workouts.length && <Onboarding />}
     {sessions && <BottomSheet title={tr("Heutiges Training")} onClose={() => Sessions(false)}>{today.length ? today.map(s => workoutButton(s)) : <p>{tr("Heute ist Erholung geplant.")}</p>}<button onClick={() => { Sessions(false); P(true); }}>{tr("Wochenplan")}</button></BottomSheet>}
     {noteEditor && <BottomSheet title={tr("Trainingsnotizen")} onClose={() => NoteEditor(false)}><textarea aria-label={tr("Trainingsnotizen bearbeiten")} defaultValue={notes?.notes ?? ''} onChange={e => { void db.dayNotes.put({ id: 'training-notes', notes: e.target.value }).catch(() => M('Notiz konnte nicht gespeichert werden.')); }} placeholder={tr("Was m\u00F6chtest du festhalten?")}/></BottomSheet>}
     {planner && <WeeklyPlanner settings={settings} workouts={workouts} onClose={() => P(false)}/>}
-    {gallery && <BottomSheet title={tr("Widget-Galerie")} onClose={() => { G(false); R(null); }}><label>{tr("{0} Größe",[tr("Widget-Galerie")])}<select value={previewSize} onChange={e=>PreviewSize(e.target.value as WidgetLayout[number]['size'])}><option value="small">{tr("Klein · 1×1")}</option><option value="medium">{tr("Mittel · 2×1")}</option><option value="large">{tr("Groß · 2×2")}</option></select></label><div className="widget-gallery">{widgetKinds.filter(k => k !== 'nutrition' || diaryEnabled).map(kind => <section key={kind}><h3>{tr(names[kind])}</h3><div className={`gallery-preview widget-cell size-${previewSize}`} inert><div className="widget-content">{widgets[kind]}</div></div><button onClick={() => { if (replace)
+    {gallery && <BottomSheet title={tr("Widget-Galerie")} onClose={() => { G(false); R(null); }}><label>{tr("{0} Größe",[tr("Widget-Galerie")])}<select value={previewSize} onChange={e=>PreviewSize(e.target.value as WidgetLayout[number]['size'])}><option value="small">{tr("Klein · 1×1")}</option><option value="medium">{tr("Mittel · 2×1")}</option><option value="large">{tr("Groß · 2×2")}</option></select></label><div className="widget-gallery">{widgetKinds.filter(k => k !== 'nutrition').map(kind => <section key={kind}><h3>{tr(names[kind])}</h3><div className={`gallery-preview widget-cell size-${previewSize}`} inert><div className="widget-content">{widgets[kind]}</div></div><button onClick={() => { if (replace)
         change(replace, { kind, size:previewSize });
     else
         void saveLayout([...layout, { id: id(), kind, size: previewSize, hidden: false }]); G(false); R(null); }}>{replace ? tr("Ersetzen") : tr("Hinzuf\u00FCgen")}</button></section>)}</div></BottomSheet>}
-    <div className="dashboard-widget-grid">{layout.filter(w => (!w.hidden || customizing) && (w.kind !== 'nutrition' || diaryEnabled)).map(w => <div key={w.id} data-widget-id={w.id} className={`widget-cell ${w.size !== 'small' ? 'wide' : ''} size-${w.size} ${customizing ? 'editing' : ''} ${w.hidden ? 'is-hidden' : ''} ${drag === w.id ? 'dragging' : ''}`} onPointerDown={e => { if (!customizing && (e.target as HTMLElement).closest('button,input,textarea,select'))
+    <div className="dashboard-widget-grid">{layout.filter(w => (!w.hidden || customizing) && w.kind !== 'nutrition').map(w => <div key={w.id} data-widget-id={w.id} className={`widget-cell ${w.size !== 'small' ? 'wide' : ''} size-${w.size} ${customizing ? 'editing' : ''} ${w.hidden ? 'is-hidden' : ''} ${drag === w.id ? 'dragging' : ''}`} onPointerDown={e => { if (!customizing && (e.target as HTMLElement).closest('button,input,textarea,select'))
             return; if (!customizing)
             press.current = setTimeout(() => C(true), 650); }} onPointerUp={() => clearTimeout(press.current)} onPointerMove={() => clearTimeout(press.current)} onPointerCancel={() => clearTimeout(press.current)} onClickCapture={e => { if (!customizing && press.current) {
             clearTimeout(press.current);

@@ -49,15 +49,3 @@ it('opens the weekly planner entirely in English and keeps weekday assignment ca
  await screen.findByRole('dialog',{name:'Weekly plan'});expect(screen.getByRole('heading',{name:'Monday'})).toBeTruthy();
  expect(screen.getByRole('option',{name:'Mein Split'})).toBeTruthy();
 });
-it('saves English food controls with canonical meal and unit values',async()=>{
- const { Nutrition }=await import('../features/nutrition/Nutrition');
- await db.settings.update('settings',{nutrition:true,language:'en'});activateLanguage('en');
- render(<MemoryRouter><Nutrition/></MemoryRouter>);
- fireEvent.click(await screen.findByRole('button',{name:'Add Breakfast'}));
- fireEvent.click(screen.getByRole('button',{name:'Manual'}));
- fireEvent.change(screen.getByLabelText('Name',{exact:true}),{target:{value:'Mein Snack'}});
- fireEvent.change(screen.getByLabelText('Unit'),{target:{value:'Portion'}});
- fireEvent.click(screen.getByRole('button',{name:'Save'}));
- await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
- expect((await db.nutrition.toArray())[0]).toMatchObject({name:'Mein Snack',meal:'Frühstück',unit:'Portion'});
-});

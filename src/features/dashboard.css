@@ -35,14 +35,11 @@
 .activity-caption > div { flex:1; min-width:0; }
 .activity-caption > svg { flex:none; color:var(--muted); }
 .widget-volume { flex-direction:row; align-items:center; gap:16px; padding:20px; }
-.widget-volume > strong,.widget-diary-values strong { display:flex; align-items:baseline; gap:6px; font-size:30px; font-weight:700; letter-spacing:-1px; font-variant-numeric:tabular-nums; flex-wrap:wrap; }
-.widget-volume strong small,.widget-diary-values strong small { font-size:13px; letter-spacing:0; font-weight:500; }
+.widget-volume > strong { display:flex; align-items:baseline; gap:6px; font-size:30px; font-weight:700; letter-spacing:-1px; font-variant-numeric:tabular-nums; flex-wrap:wrap; }
+.widget-volume strong small { font-size:13px; letter-spacing:0; font-weight:500; }
 .widget-volume > strong { padding-left:16px; border-left:1px solid var(--line); }
 .widget-weekly > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
 .widget-weekly strong { font-size:28px; font-weight:650; letter-spacing:-.8px; font-variant-numeric:tabular-nums; }
-.widget-diary { gap:20px; }
-.widget-diary-values { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
-.widget-diary-values > span { min-width:0; }
 .widget-add { min-height:152px; justify-content:center; align-items:center; gap:12px; color:var(--muted); background:var(--surface); }
 .widget-customize { background:var(--surface); border-radius:20px; padding:20px; margin-bottom:16px; }
 .widget-customize h2 { margin-top:0; }
@@ -59,7 +56,7 @@
 .widget-cell.size-small .activity-month:not(:last-child) { display:none; }
 .widget-cell.size-small .activity-months { grid-template-columns:1fr; }
 .widget-cell.size-small .widget-weekly > div { grid-template-columns:1fr; }
-.widget-cell.size-small .widget-volume,.widget-cell.size-small .widget-diary-values { flex-direction:column; align-items:flex-start; }
+.widget-cell.size-small .widget-volume { flex-direction:column; align-items:flex-start; }
 .widget-cell.size-small .widget-volume > strong { padding:0; border:0; }
 .widget-cell.size-small .widget-summary p:nth-of-type(n+3),.widget-cell.size-small .widget-summary > a:nth-of-type(n+3) { display:none; }
 .widget-cell.size-medium .widget-summary p:nth-of-type(n+5) { display:none; }

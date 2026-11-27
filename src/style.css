@@ -549,21 +549,6 @@ html, body { background-color:var(--bg); }
 .anatomy-note { font-size:12px; }
 @media(max-height:740px) { .body-map { height:390px; } }
 .meal-photo { display:block; width:100%; max-height:320px; object-fit:contain; margin:12px 0; }
-.diary-entry { padding:16px 0; border-top:1px solid var(--line); overflow-wrap:anywhere; }
-.diary-switch { display:flex; gap:4px; border-bottom:1px solid var(--line); margin:20px 0; padding-bottom:8px; }
-.diary-switch button { flex:1; min-width:0; margin:0; padding:12px 6px; border-color:transparent; background:transparent; color:var(--muted); }
-.diary-switch button[aria-pressed="true"] { background:var(--ink); color:var(--bg); }
-.diary-meal { padding:18px 20px; }
-.diary-meal h2 { margin:0; }
-.diary-meal .row button { margin:0; min-width:44px; min-height:44px; font-size:22px; }
-.diary-empty { color:var(--muted); font-size:13px; margin:4px 0 0; }
-.diary-details { margin:24px 0; border-top:1px solid var(--line); }
-.diary-details summary { cursor:pointer; padding:18px 0; font-weight:600; }
-.diary-editor { scroll-margin-top:16px; }
-.nutrition-preferences details { border-top:1px solid var(--line); margin:16px 0; }
-.nutrition-preferences summary { padding:16px 0; cursor:pointer; font-weight:600; }
-.nutrition-preferences textarea { min-height:140px; }
-.diary-settings-link { display:inline-block; margin-bottom:20px; color:var(--muted); }
 .meal-reminder { padding:20px; border:1px solid var(--ink); border-radius:16px; margin-bottom:24px; background:var(--surface); }
 .meal-reminder a { text-decoration:underline; margin-right:16px; }
 /* Safari's native date/time controls must use the same content edges as other fields. */
@@ -590,7 +575,7 @@ h3 { font-size:17px; font-weight:650; }
 button, .button { border-radius:8px; }
 button.primary, a.primary, .focus-complete { background:var(--ink); color:var(--bg); border:0; box-shadow:none; }
 button.action { display:flex; align-items:center; justify-content:center; gap:8px; }
-article > button, article > .button, .diary-entry > button { margin:4px 8px 4px 0; }
+article > button, article > .button { margin:4px 8px 4px 0; }
 .button-row { display:flex; flex-wrap:wrap; gap:8px; }
 .tile small { display:block; color:var(--muted); font-size:13px; margin-top:4px; }
 .app-dock { background:var(--bg); border-top:1px solid var(--border,var(--line)); }
@@ -602,8 +587,6 @@ summary::-webkit-details-marker { display:none; }
 summary::before { content:""; flex:none; width:6px; height:6px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); transition:transform .15s; }
 details[open] > summary::before { transform:rotate(45deg); }
 details:not([open]), .effort:not([open]), .exercise-swap:not([open]) { min-height:0; padding:12px 16px; }
-.diary-details summary { padding:0; }
-.diary-details[open] summary { padding:12px 0; }
 button::before, button::after, .calendar button::before, .calendar button::after { content:none; }
 .calendar .outside-month { color:var(--muted); opacity:.45; }
 .calendar .selected { background:var(--ink); color:var(--bg); opacity:1; }
@@ -613,7 +596,7 @@ progress::-webkit-progress-value { background:var(--accent); border-radius:4px; 
 progress::-moz-progress-bar { background:var(--accent); border-radius:4px; }
 .segmented { display:flex; gap:4px; margin:8px 0; }
 .segmented button { flex:1; min-width:0; padding:10px 6px; margin:0; background:transparent; }
-.segmented button[aria-pressed="true"], .diary-switch button[aria-pressed="true"] { background:var(--accent); color:var(--bg); }
+.segmented button[aria-pressed="true"] { background:var(--accent); color:var(--bg); }
 .workout-fields .set, .workout-fields .setheading { display:grid; grid-template-columns:32px minmax(0,1fr) minmax(0,1fr) 44px; gap:8px; align-items:center; padding:8px 0; margin-left:0; margin-right:0; border:0; }
 .workout-fields .set.current { outline:1px solid var(--ink); outline-offset:3px; border-radius:6px; }
 .workout-fields .set > button { width:32px; min-width:0; padding:4px 0; margin:0; }
@@ -634,7 +617,7 @@ progress::-moz-progress-bar { background:var(--accent); border-radius:4px; }
 .overview h1 { font-size:28px; font-weight:650; letter-spacing:normal; }
 .focus-workout .set.current .numeric { display:grid; }
 details { border-radius:14px; }
-.exercise-swap > summary, .effort > summary, .diary-details > summary { min-height:20px; }
+.exercise-swap > summary, .effort > summary { min-height:20px; }
 .workout-fields > details > button { margin:4px 8px 4px 0; }
 .numeric-label { display:none; }
 .focus-workout .workout-fields .set { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:12px 8px; }

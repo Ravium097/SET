@@ -5,7 +5,8 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 import { MemoryRouter } from "react-router-dom";
 import { db, init, exportData, restore, type Workout } from "../data";
 import { ActivityDots, Dashboard, dashboardData } from "../features/Dashboard";
-import { localDay } from "../features/nutrition/service";
+import { format } from "date-fns";
+const localDay = () => format(new Date(), "yyyy-MM-dd");
 const workout=(id:string,date:string,status:Workout["status"]="completed"):Workout=>({id,date,status,name:"Oberkörper",started:0,duration:60,exercises:[]});
 beforeEach(async()=>{for(const t of db.tables)await t.clear();await init();await db.workouts.put(workout("today",localDay()));});
 afterEach(cleanup);
@@ -36,4 +37,16 @@ it("shows a real active-workout resume link and saved body weight",async()=>{
  const link=await screen.findByRole("link",{name:/Training fortsetzen/});expect(link.getAttribute("href")).toBe("/workout/active");
  expect(screen.getByText("Aus deinen gespeicherten Angaben")).toBeTruthy();
  expect(screen.getByText("80")).toBeTruthy();
+});
+it("ignores legacy enabled diary widgets without changing stored settings or archives", async()=>{
+ await db.settings.update('settings',{nutrition:true,hydration:true,dashboardLayout:[{id:'old-diary',kind:'nutrition',size:'large',hidden:false},{id:'training-kept',kind:'training',size:'small',hidden:false}]});
+ await db.nutrition.put({id:'archived',date:'2026-11-24',time:'08:00',name:'Anonymisiert',meal:'Frühstück',amount:1,unit:'Portion',notes:''});
+ render(<MemoryRouter><Dashboard/></MemoryRouter>);
+ await waitFor(()=>expect(document.querySelector('[data-widget-id="training-kept"]')).toBeTruthy());
+ expect(document.querySelector('[data-widget-id="old-diary"]')).toBeNull();
+ expect(document.querySelector('[data-widget-id="training-kept"]')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Dashboard anpassen'}));
+ expect(screen.queryByRole('checkbox',{name:'Tagebuch'})).toBeNull();
+ expect((await exportData()).nutrition?.[0].id).toBe('archived');
+ expect((await db.settings.get('settings'))?.dashboardLayout?.[0].id).toBe('old-diary');
 });

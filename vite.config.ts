@@ -32,12 +32,6 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/recovery\.html$/],
         skipWaiting: false,
         clientsClaim: true,
-        globIgnores: ['**/rep-tracker/**'],
-        runtimeCaching: [{
-          urlPattern: ({url})=>url.origin===self.location.origin&&url.pathname.startsWith('/rep-tracker/vision-1.2.3-face-1/'),
-          handler: 'CacheFirst',
-          options: {cacheName:'base-rep-model-vision-1.2.3-face-1',cacheableResponse:{statuses:[200]},expiration:{maxEntries:8,maxAgeSeconds:31536000}}
-        }],
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
       },
     }),
